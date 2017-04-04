@@ -1,0 +1,1 @@
+This placeholder.txt file ensures "output" subdirectory is nonempty.

@@ -1,0 +1,56 @@
+READ STEP_AP214_file
+set n = number of atomic parts
+CREATE 2^n hypercube (with heights 0..n)
+
+FOR EACH element
+    set element_id
+    set element_name = FALSE
+FOR EACH covers relationship
+    set covers(parent_id, child_id) = FALSE
+
+FOR n = n
+    top_level_assembly = a part without a parent
+    available(top_id) = FALSE
+
+FOR n = 0
+    embed an empty shape to element 0 of 2^n hypercube
+    list = empty (a list for elements available to be embedded)
+    avaiable(zero) = FALSE
+
+FOR n = 1
+    FOR EACH all atoms
+    embed part onto lattice
+    list <- add part to list
+    available(atom) = TRUE
+
+FOR n = 2 .. n-1
+    first <- shift first item in list
+    
+    FIRST
+        update list
+        SECOND
+            EXIT IF top_level_assembly is the first item (and only item left) in available list
+
+            GET first item in the avaialble_list
+            IF all siblings are in the available_list
+                available(parent_id) = TRUE
+                FOR EACH sibling
+                    available(sibling_id) = FALSE
+                    covers(parent_id, child_id) = TRUE
+                
+            THEN
+                DO THINGS
+            ELSE
+                rotate the first in list to the last
+    
+        REPEAT SECOND
+        embed parent if node number
+    REPEAT FIRST
+    
+    
+    if all siblings are available for embedding
+    
+    then
+    
+    else
+    END REPEAT
