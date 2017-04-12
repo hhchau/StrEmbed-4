@@ -111,7 +111,7 @@ sub get_parents {
     return \@parents;
 }
 
-sub join {
+sub join {    # clash with CORE::join ???
     my @list = @_;
     my $e = pop @list;
     $e |= $_ foreach @list;

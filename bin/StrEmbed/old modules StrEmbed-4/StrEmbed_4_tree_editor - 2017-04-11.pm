@@ -20,7 +20,6 @@
 # StrEmbed-3 release A - HHC 2017-01-06
 # HHC - 2017-01-09 - post Release A
 # HHC - 2017-03-07 - starting StrEmbed-4
-# HHC - 2017-03-12 - insert before and insert after work correctly
 
 require 5.002;
 use warnings;
@@ -53,34 +52,19 @@ sub change_tree {
 
     # print "@{$_}\n" foreach @assy_tree;
 
-    if ($command eq "insert_before" and &compare_array(\@first_path, \@second_path) ) {
+    if ($command eq "up") {
         foreach my $ref_this (@assy_tree) {
             my @this = @{$ref_this};
             if ( &compare_array(\@this, \@first) ) {
-                push @temp_tree, \@this if &compare_array(\@first, \@second);
+                push @temp_tree, $ref_this if &compare_array(\@first, \@second);
             } elsif ( &compare_array(\@this, \@second) ) {
                 push @temp_tree, \@first, \@second;
             } else {
                 push @temp_tree, \@this;
             }
+            $assy_tree_changed = 1;
         }
-        @temp_tree = &reorder_tree(\@first, \@temp_tree);
-        @temp_tree = &reorder_tree(\@second, \@temp_tree);
-        $assy_tree_changed = 1;
-    } elsif ($command eq "insert_after" and &compare_array(\@first_path, \@second_path) ) {
-        foreach my $ref_this (@assy_tree) {
-            my @this = @{$ref_this};
-            if ( &compare_array(\@this, \@first) ) {
-                push @temp_tree, \@this if &compare_array(\@first, \@second);
-            } elsif ( &compare_array(\@this, \@second) ) {
-                push @temp_tree, \@second, \@first;
-            } else {
-                push @temp_tree, \@this;
-            }
-        }
-        @temp_tree = &reorder_tree(\@first, \@temp_tree);
-        @temp_tree = &reorder_tree(\@second, \@temp_tree);
-        $assy_tree_changed = 1;
+    } elsif ($command eq "down") {
     } elsif ($command eq "adopt") {
         # need to exclude bare atoms
         # print "\n";
@@ -107,41 +91,27 @@ sub change_tree {
             }
             $assy_tree_changed = 1;
         }
-    } elsif ($command eq "assy" and &compare_array(\@first_path, \@second_path) ) {
-        my @first_tree = ();
-        my @second_tree = ();
-        my @rest = ();
-        my $new = "ASSY_" . ++$n;
-        ### first pass
+    } elsif ($command eq "assy") {
         foreach my $ref (@assy_tree) {
-            if (  &compare_array_first_few(\@first, $ref) and not &compare_array(\@first, $ref)  ) {
-                my (undef, $ref_tail) = &compare_array_first_few(\@first, $ref);
-                my @tail = @{$ref_tail};
-                push @first_tree, [(@first_path, $new, $first_name, @tail)];
-            } elsif (  &compare_array_first_few(\@second, $ref) and not &compare_array(\@second, $ref)  ) {
-                my (undef, $ref_tail) = &compare_array_first_few(\@second, $ref);
-                my @tail = @{$ref_tail};
-                push @second_tree, [(@second_path, $new, $second_name, @tail)];
+            my @this = my @pre_this = @{$ref};
+            my $name_this = pop @pre_this;
+            if ( &compare_array(\@this, \@first) and @pre_this eq @pre_to) {
+                my $new_name = "ASSY_" . ++$n;
+                my @new_pre = (@pre_this, $new_name);
+                my @new_from = (@new_pre, $name_from);
+                my @new_to = (@new_pre, $name_to);
+                # print "+ @new_pre\n";
+                # print "+ @new_from\n";
+                # print "+ @new_to\n";
+                push @temp_tree, \@new_pre;
+                push @temp_tree, \@new_from;
+                push @temp_tree, \@new_to;
+            } elsif (@pre_this eq @pre_from and $name_this eq $name_to) {
+                # skip
             } else {
-                push @rest, $ref;
-            }
-        }
-        ### second pass
-        ### need to correct ordering of first and second ???
-        foreach my $ref (@rest) {
-            print "-> @{$ref}\n";
-            my @this = my @this_path = @{$ref};
-            my $this_name = pop @this_path;
-            if ( &compare_array(\@this, \@first) ) {
-                # first: do something
-                push @temp_tree, [(@this_path, $new)];
-                push @temp_tree, [(@this_path, $new, $first_name)], @first_tree;
-                push @temp_tree, [(@this_path, $new, $second_name)], @second_tree;
-            } elsif ( &compare_array(\@this, \@second) ) {
-                # second: skip
-            } else {
-                # rest: copy verbatim
+                # copy whatever it was (not from, not to)
                 push @temp_tree, $ref;
+                # print "  @{$ref}\n";
             }
             $assy_tree_changed = 1;
         }
@@ -172,81 +142,10 @@ sub change_tree {
     return @temp_tree;
 }
 
-sub reorder_tree {
-    my @second = @{$_[0]};
-    my @array = @{$_[1]};
-    my @before = ();
-    my @middle = ();
-    my @children = ();
-    my @after = ();
-    my @rest = ();
-    my $found = 0;
-    foreach my $ref (@array) {
-        if ( &compare_array_first_few(\@second, $ref) and not &compare_array(\@second, $ref) ) {
-            push @children, $ref;
-        } else {
-            push @rest, $ref;
-        }
-    }
-    foreach my $ref (@rest) {
-        my $match = &compare_array_first_few(\@second, $ref);
-        if ($match) {
-            push @middle, $ref;
-            $found = 1;
-        } else {
-            if ($found) {
-                push @after, $ref;
-            } else {
-                push @before, $ref;
-            }
-        }
-    }
-    return @before, @middle, @children, @after;
-}
-
-sub XXX_reorder_array {
-    my @first = @{$_[0]};
-    my @array = @{$_[1]};
-    my @before = ();
-    my @middle = ();
-    my @after = ();
-    my $found = 0;
-    foreach my $ref (@array) {
-        my $match = &compare_array_first_few(\@first, $ref);
-        if ($match) {
-            push @middle, $ref;
-            $found = 1;
-        } else {
-            if ($found) {
-                push @after, $ref;
-            } else {
-                push @before, $ref;
-            }
-        }
-    }
-    return @before, @middle, @after;
-}
-
-sub compare_array_first_few {
-    ### i/p - \@first, \@second
-    ### o/p - 
-    my @first = @{$_[0]};
-    my @second = @{$_[1]};
-    my @rest = @second;
-    return 0 if $#first > $#second;
-    foreach my $i (0..$#first) {
-        return 0 if $first[$i] ne $second[$i];
-        shift @rest;
-    }
-    return (1, \@rest);
-}
-
 sub compare_array {
-    ### i/p - \@first, \@second
-    ### o/p - 
     my @first = @{$_[0]};
     my @second = @{$_[1]};
-    return 0 if $#first != $#second;
+    return 0 if $#first ne $#second;
     foreach my $i (0..$#first) {
         return 0 if $first[$i] ne $second[$i];
     }

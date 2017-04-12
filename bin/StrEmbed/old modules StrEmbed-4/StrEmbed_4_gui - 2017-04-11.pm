@@ -24,7 +24,6 @@
 # HHC - 2017-03-07 - starting StrEmbed-4
 # HHC - 2017-03-24 - use FileSelect
 # HHC - 2017-04-04 - on GitHub
-# HHC - 2017-03-12 - insert before and insert after work correctly
 
 require 5.002;
 use warnings;
@@ -749,12 +748,12 @@ sub click_entry {
     my $name1 = $popup -> Entry(-textvariable => \$entry) -> pack;
     my $name2 = $popup -> Entry(-textvariable => \$target) -> pack;
     my $button1 = $popup -> Button(
-        -text => "insert before",
-        -command => [\&capture, "insert_before"],
+        -text => "up",
+        -command => [\&capture, "up"],
     ) -> pack;
     my $button2 = $popup -> Button(
-        -text => "insert after",
-        -command => [\&capture, "insert_after"],
+        -text => "down",
+        -command => [\&capture, "down" ],
     ) -> pack;
     my $button3 = $popup -> Button(
         -text => "adopt",

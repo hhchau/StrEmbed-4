@@ -24,7 +24,6 @@
 # HHC - 2017-03-07 - starting StrEmbed-4
 # HHC - 2017-03-24 - use FileSelect
 # HHC - 2017-04-04 - on GitHub
-# HHC - 2017-03-12 - insert before and insert after work correctly
 
 require 5.002;
 use warnings;
@@ -165,20 +164,10 @@ sub tk_pulldown_menu {
     my $menu_53 = $pm -> Menubutton( -text => "Hasse diagram",
         -menuitems => [
             [ 'command' => "print info", -command => sub { &tk_print_all_relations } ],
-            # [ 'command' => "tk_change_tree", -command => sub { &tk_change_tree } ],
-            # [ 'command' => "tree_modify", -command => sub { @assy_tree = &tree_modify(@assy_tree) } ],
+            [ 'command' => "tk_change_tree", -command => sub { &tk_change_tree } ],
+            [ 'command' => "tree_modify", -command => sub { @assy_tree = &tree_modify(@assy_tree) } ],
             [ 'command' => "delete_tree", -command => sub { &delete_tree } ],
             [ 'command' => "create_tree", -command => sub { &insert_tree_items(@assy_tree) } ],
-        ]
-    ) -> pack(
-        -anchor => 'nw',
-        -side => 'left',
-    );
-
-    my $menu_54 = $pm -> Menubutton( -text => "Test",
-        -menuitems => [
-            [ 'command' => "print_tree", -command => sub { &print_tree } ],
-            [ 'command' => "print_array", -command => sub { &print_array } ],
         ]
     ) -> pack(
         -anchor => 'nw',
@@ -195,19 +184,6 @@ sub tk_pulldown_menu {
         -anchor => 'nw',
         -side => 'right',
     );
-}
-
-sub print_tree {
-    print "print_tree\n";
-    my @list = $tree -> child_entries( '', 3);
-    print "$_\n" foreach @list;
-}
-
-sub print_array {
-    print "print_array\n";
-    foreach my $ref (@assy_tree) {
-        print "@{$ref}\n";
-    }
 }
 
 sub delete_tree {
@@ -749,12 +725,12 @@ sub click_entry {
     my $name1 = $popup -> Entry(-textvariable => \$entry) -> pack;
     my $name2 = $popup -> Entry(-textvariable => \$target) -> pack;
     my $button1 = $popup -> Button(
-        -text => "insert before",
-        -command => [\&capture, "insert_before"],
+        -text => "up",
+        -command => [\&capture, "up"],
     ) -> pack;
     my $button2 = $popup -> Button(
-        -text => "insert after",
-        -command => [\&capture, "insert_after"],
+        -text => "down",
+        -command => [\&capture, "down" ],
     ) -> pack;
     my $button3 = $popup -> Button(
         -text => "adopt",
@@ -797,7 +773,7 @@ sub click_entry {
 
     sub capture {
         my $action = shift;
-        @assy_tree = &change_tree(\@assy_tree, $action, $entry, $target);
+        @assy_tree = &change_tree(\@assy_tree, $entry, $target, $action);
         $popup -> destroy;
         &delete_tree;
         &insert_tree_items(@assy_tree);
