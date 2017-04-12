@@ -51,8 +51,6 @@ sub change_tree {
     my @first_path = @pre_from;
     my @second_path = @pre_to;
 
-    # print "@{$_}\n" foreach @assy_tree;
-
     if ($command eq "insert_before" and &compare_array(\@first_path, \@second_path) ) {
         foreach my $ref_this (@assy_tree) {
             my @this = @{$ref_this};
@@ -127,9 +125,7 @@ sub change_tree {
             }
         }
         ### second pass
-        ### need to correct ordering of first and second ???
         foreach my $ref (@rest) {
-            print "-> @{$ref}\n";
             my @this = my @this_path = @{$ref};
             my $this_name = pop @this_path;
             if ( &compare_array(\@this, \@first) ) {
@@ -181,6 +177,7 @@ sub reorder_tree {
     my @after = ();
     my @rest = ();
     my $found = 0;
+    ### first pass
     foreach my $ref (@array) {
         if ( &compare_array_first_few(\@second, $ref) and not &compare_array(\@second, $ref) ) {
             push @children, $ref;
@@ -188,6 +185,7 @@ sub reorder_tree {
             push @rest, $ref;
         }
     }
+    ### second pass
     foreach my $ref (@rest) {
         my $match = &compare_array_first_few(\@second, $ref);
         if ($match) {
@@ -202,29 +200,6 @@ sub reorder_tree {
         }
     }
     return @before, @middle, @children, @after;
-}
-
-sub XXX_reorder_array {
-    my @first = @{$_[0]};
-    my @array = @{$_[1]};
-    my @before = ();
-    my @middle = ();
-    my @after = ();
-    my $found = 0;
-    foreach my $ref (@array) {
-        my $match = &compare_array_first_few(\@first, $ref);
-        if ($match) {
-            push @middle, $ref;
-            $found = 1;
-        } else {
-            if ($found) {
-                push @after, $ref;
-            } else {
-                push @before, $ref;
-            }
-        }
-    }
-    return @before, @middle, @after;
 }
 
 sub compare_array_first_few {
@@ -251,46 +226,4 @@ sub compare_array {
         return 0 if $first[$i] ne $second[$i];
     }
     return 1;
-}
-
-sub XXX_pre_name_from_to {
-    my $input = shift;
-    my @list = split '\.', $input;
-    my $name = pop @list;
-    return \@list, $name;
-}
-
-sub XXX_tree_modify {
-    ### i/p - $from, $to, @Htree
-    ### o/p - @Htree modified
-    print ">>> tree_modify\n";
-    my @new;
-    # my $from = shift;
-    # my $to = shift;
-
-    foreach my $ref (@_) {
-        my @list = @{$ref};
-        print "@list\n";
-        my $end = $list[$#list];
-        # print "$#list $end\n";
-        my @xxx = ($#list, $end);
-        push @new, \@xxx;
-    }
-
-    foreach my $ref (@new) {
-        my ($i, $part) = @{$ref};
-        # print "$i $part\n";
-    }
-
-    my @name = ();
-    foreach my $ref (@new) {
-        my ($i, $part) = @{$ref};
-        $name[$i] = $part;
-        my @list = ();
-        for (0..$i) {
-            push @list, $name[$_];
-        }
-        # print "$i @list [$name[$i]]\n";
-    }
-    return @_;
 }
