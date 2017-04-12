@@ -34,7 +34,6 @@ use Tk::Balloon;
 use Tk::Tree;
 use Tk::PNG;
 use StrEmbed::FileSelect;
-# use StrEmbed::Splashscreen::Splashscreen;
 
 our @assy_tree;
 
@@ -73,7 +72,7 @@ my $chosen_part;
 my $chosen_index;
 my @list_of_assembly_parts;
 my $new_assy_name = "default";
-my @assy_list_of_list;
+# my @assy_list_of_list;
 my $assy_counter = 1;
 my $ff_button_assy;
 my $ff_button_parts;
@@ -165,8 +164,6 @@ sub tk_pulldown_menu {
     my $menu_53 = $pm -> Menubutton( -text => "Hasse diagram",
         -menuitems => [
             [ 'command' => "print info", -command => sub { &tk_print_all_relations } ],
-            # [ 'command' => "tk_change_tree", -command => sub { &tk_change_tree } ],
-            # [ 'command' => "tree_modify", -command => sub { @assy_tree = &tree_modify(@assy_tree) } ],
             [ 'command' => "delete_tree", -command => sub { &delete_tree } ],
             [ 'command' => "create_tree", -command => sub { &insert_tree_items(@assy_tree) } ],
         ]
@@ -179,6 +176,7 @@ sub tk_pulldown_menu {
         -menuitems => [
             [ 'command' => "print_tree", -command => sub { &print_tree } ],
             [ 'command' => "print_array", -command => sub { &print_array } ],
+            [ 'command' => "assy_list_of_lists", -command => sub { &create_new_assy(\@assy_tree) } ],
         ]
     ) -> pack(
         -anchor => 'nw',
@@ -609,10 +607,49 @@ sub file_open {
     }
 }
 
+sub create_new_assy {
+    # print "... create_new_assy\n";
+    my @list = ();
+    ### first pass
+    foreach my $entry ( $tree -> child_entries( '', 20) ) {
+        push @list, [split '\.', $entry];
+    }
+    ### second pass
+    my $current = "";
+    my @new;
+    foreach my $ref (reverse @list) {
+        my @entities = @{$ref};
+        # print "@entities\n";
+        if ($#entities > 0) {
+            my $child = pop @entities;
+            my $parent = pop @entities;
+            if ($parent eq $current) {
+                unshift @{$new[$#new]}, $child;
+                # print ", $child\n";
+            } else {
+                $current = $parent;
+                $new[$#new + 1] = [($child, $parent )];
+                # print "$parent - $child\n";
+            }
+        }
+    }
+    ### third pass
+    foreach my $ref (@new) {
+        unshift @{$ref}, pop @{$ref};
+    }
+    ### fourth pass
+    foreach my $ref (@new) {
+        print "@{$ref}\n";
+    }
+    return \@new;
+}
+
 sub file_save {
     &step_delete_old;
-    foreach my $set (@assy_list_of_list) {
+    my $ref_new = &create_new_assy($tree);
+    foreach my $set (@$ref_new) {
         my @list = @$set;
+        # print "file_save ... @list\n";
         &create_new_shape_def_rep(@list);
     }
     my $file = $new_assy_name . ".STEP" if $new_assy_name;
@@ -1082,13 +1119,13 @@ sub tk_button_parts {
     $ff_button_parts -> configure(-state => 'disabled');
 }
 
-sub tk_button_assy {
+sub XXX_tk_button_assy {
     # print "@list_of_assembly_parts ($new_assy_name)\n";
     if ($new_assy_name =~ /^(?:[A-Za-z0-9_-]+,?)+(?<!,)$/) {
         # print "good\n";
         $info -> insert( 'end', qq(Sub-assembly "$new_assy_name" is created with part(s)/subassembly(ies) "@list_of_assembly_parts"\n), );
         push @available_atoms_n_subassemblies, $new_assy_name if @available_atoms_n_subassemblies;
-        push @assy_list_of_list, [$new_assy_name, @list_of_assembly_parts];
+        push my @assy_list_of_list, [$new_assy_name, @list_of_assembly_parts];
         @list_of_assembly_parts = ();
         $assy_counter++;
         $ff_button_assy -> configure (-state => 'disabled');

@@ -81,27 +81,20 @@ sub change_tree {
         $assy_tree_changed = 1;
     } elsif ($command eq "adopt") {
         # need to exclude bare atoms
-        # print "\n";
         foreach my $ref (@assy_tree) {
             my @this = my @pre_this = @{$ref};
             my $name_this = pop @pre_this;
-            # print "* @pre_this, $name_this\n";
             if ( &compare_array(\@this, \@first) ) {
                 # skip [original] from
                 # unless the same
                 push @temp_tree, $ref if $name_from eq $name_to;
-                # print "- @pre_this, $name_this\n";
             } elsif ( &compare_array(\@this, \@second) ) {
                 # put to and adopt from
                 my @temp = (@pre_this, $name_this, $name_from);
                 push @temp_tree, $ref;
                 push @temp_tree, \@temp;
-                # print ". @{$ref}\n";
-                # print "+ @temp\n";
             } else {
-                # copy whatever it was (not from, not to)
                 push @temp_tree, $ref;
-                # print "  @pre_this, $name_this\n";
             }
             $assy_tree_changed = 1;
         }
@@ -143,18 +136,16 @@ sub change_tree {
         }
     } elsif ($command eq "collapse") {
         foreach my $ref (@assy_tree) {
-            my @pre_this = @{$ref};
-            my $name_this = pop @pre_this;
-            if (@pre_this eq @pre_from and $name_this eq $name_from) {
-                # skip
-                # print "- @pre_this, $name_this\n";
+            my @this = my @this_path = @{$ref};
+            my $name_this = pop @this_path;
+            if ( &compare_array(\@this, \@first) ) {
+                # skip whole line
             } else {
-                # print ". @pre_this, $name_this\n";
+                # remove a name
                 my @temp;
                 foreach my $entity (@{$ref}) {
-                    push @temp, $entity unless $entity eq $name_from;
+                    push @temp, $entity unless $entity eq $first_name;
                 }
-                # print "o @temp\n";
                 push @temp_tree, \@temp;
             }
             $assy_tree_changed = 1;
@@ -163,7 +154,6 @@ sub change_tree {
         # do nothing
     }
 
-    # print "@{$_}\n" foreach @temp_tree;
     @temp_tree = @assy_tree unless $assy_tree_changed;
     return @temp_tree;
 }

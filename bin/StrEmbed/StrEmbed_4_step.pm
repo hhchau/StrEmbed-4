@@ -269,6 +269,49 @@ sub create_new_shape_def_rep {
     }
 }
 
+sub XXX_create_one_new_shape_def_rep {
+    ### o/p - %create_new_assy_relation
+    my $parent = shift;
+    my $child = shift;
+    my %template;
+    foreach my $id ('#sdr', '#pds', '#pd', '#pdfwss', '#p', '#pc', '#app', '#pdc', '#apc',
+                    '#sr', '#axis', '#origin', '#dirz', '#dirx', '#geo',
+                    '#uncertainy', '#mm', '#radian', '#steradian',
+                    '#prpc', '#apdp', '#apdc') {
+        $template{$id} = ++$n;
+    }
+    
+    my $data_start = tell DATA;
+    while (<DATA>) {
+        my $line = $_;
+        chomp $line;
+        $line =~ s/\s*;\s*$//;
+        while (my ($old, $new) = each %template) {
+            $line =~ s/\Q$old\E([,\)\s])/#\Q$new\E$1/g;
+        }
+
+        if ( $line =~ m/^\s*(\#\d+)\s*=\s*(.*)$/ ) {
+            my $id = $1;
+            my $content = $2;
+            $line{$id} = $content;
+            if ($content =~ m/^PRODUCT\s*\(/) {
+                $content =~ s/\#name\#/$parent/g;
+                $line{$id} = $content;
+            } elsif ($content =~ m/^SHAPE_REPRESENTATION\s*\(/) {
+                $part{$parent}[0] = $id;
+                $content =~ s/\#name\#/$parent/;
+                $line{$id} = $content;
+            } elsif ($content =~ m/^PRODUCT_DEFINITION\s*\(/) {
+                $part{$parent}[1] = $id;
+            } elsif ($content =~ m/^PRODUCT_DEFINITION_SHAPE\s*\(/) {
+                $part{$parent}[2] = $id;
+            }
+        }
+    }
+    seek DATA, $data_start, 0;    # reset DATA pointer to the beginning
+    &create_new_assy_relation($parent, $child);
+}
+
 sub create_new_assy_relation {
     ### o/p - %line
     my ($parent, $child) = @_;
