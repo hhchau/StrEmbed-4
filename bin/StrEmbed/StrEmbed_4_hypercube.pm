@@ -23,7 +23,7 @@
 # HHC - 2017-03-24
 
 require 5.002;
-use warnings;
+# use warnings qw(FATAL);
 use strict;
 use Set::Partition;
 
@@ -31,12 +31,23 @@ my $max;  # hypercube size
 my $i;    # current n
 my %hypercube;
 my %elements_at_height;
+my @array;
 
 return 1;
 
 ###
 ### subroutines
 ###
+
+sub hypercube_initialise {
+    # $max = "";
+    # $i = "";
+    # %hypercube = ();
+    # %elements_at_height = ();
+    # @array = ();
+    # HHC - 2017-05-23 - problem with changing assembly structure
+    #                  - can't reload another STEP file at the moment
+}
 
 sub hypercube_return_chain {
     our @list = ();
@@ -78,7 +89,7 @@ sub hypercube_corresponding_to_step_file {
     my $max = shift;   # setting $max for the first and only time in this hypercube module
     &calcualte_elements_for_each_height($max);
     my $ref_array = &hypercube_height_n_position;
-    &tk_hasse($ref_array);
+    return $ref_array;
 }
 
 sub get_parents_children {
@@ -164,14 +175,19 @@ sub hypercube_height_n_position {
     ### i/p - %elements_at_height
     ### o/p - \@array
 
-    my @array;
+    @array = ();
     while (my ($height, $ref_elements) = each %elements_at_height) {
         my $j = 0;
         my @list = @$ref_elements;
         foreach my $e (@$ref_elements) {
+            # print "[$height][$j] = $e\n";
             $array[$height][$j] = $e;
             $j++;
         }
     }
+    return \@array;
+}
+
+sub hypercube_get_array {
     return \@array;
 }
