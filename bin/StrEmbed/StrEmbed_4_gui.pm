@@ -25,8 +25,6 @@
 # HHC - 2017-03-24 - use FileSelect
 # HHC - 2017-04-04 - on GitHub
 # HHC - 2017-03-12 - insert before and insert after work correctly
-# HHC - 2017-05-12 - trying to populated @assy_tree (a HTree backwards)
-# HHC - 2017-05-19 - sorted out replot hasse diagram after HTree changes
 
 require 5.002;
 use warnings;
@@ -47,22 +45,18 @@ my $activewidth_is_covered_by = 5;
 my $hightlighted_width_is_covered_by = 3;
 my $mw;
 my $c;
-my $box;
-my $info;
-my $status;
-my $tree;
-my $ff_button_assy;
-my $ff_button_parts;
-my $menu_01;
-
 my @array_with_coords;
-my %hash_id_lookup_to_array;
+my %array_lookup_id_to_hash;
 my %element;
 my %element_id;
 my %element_label;
 my $active_element_id = 1;
 my $active_element_label = 1;
 my %is_covered_by;
+my $tree;
+my $box;
+my $info;
+my $status;
 my $iterations;
 my $zeros;
 my $counter;
@@ -78,15 +72,14 @@ my $chosen_part;
 my $chosen_index;
 my @list_of_assembly_parts;
 my $new_assy_name = "default";
+# my @assy_list_of_list;
 my $assy_counter = 1;
+my $ff_button_assy;
+my $ff_button_parts;
+my $menu_01;
 my @atoms;
-my $selected_entry = "";
-my $entry_under_cursor = "";
-my $entry_first_selected = "";
-my $entry_second_selected = "";
-
-my %assembly;    # custom assembly relationship, a parent points to a number of children
-my %has_parent;  # custom assembly relationship, a child points to its parent
+my @pairs;
+my $selected_entry;
 
 return 1;
 
@@ -94,46 +87,10 @@ return 1;
 ### Tk gui widgets
 ###
 
-sub tk_initialise {
-    @assy_tree = ();
-    @array_with_coords = ();
-    %hash_id_lookup_to_array = ();
-    %element = ();
-    %element_id = ();
-    %element_label = ();
-    $active_element_id = 1;
-    $active_element_label = 1;
-    %is_covered_by = ();
-    $iterations = "";
-    $zeros = "";
-    $counter = "";
-    $percentage = "";
-    $quit_optimisation = "";
-    %embedded = ();
-    %parts_at_height_n = ();
-    %lookup_label_to_id = ();
-    %entity = ();
-    $entity_focused = "";
-    @available_atoms_n_subassemblies = ();
-    $chosen_part = "";
-    $chosen_index = "";
-    @list_of_assembly_parts = ();
-    $new_assy_name = "default";
-    $assy_counter = "";
-    @atoms = ();
-    $selected_entry = "";
-    $entry_under_cursor = "";
-    $entry_first_selected = "";
-    $entry_second_selected = "";
-
-    %assembly = ();    # custom assembly relationship, a parent points to a number of children
-    %has_parent = ();  # custom assembly relationship, a child points to its parent
-
-    &delete_tree;
-}
-
 sub tk_mainloop {
+
     # Main Window
+
     $mw = new MainWindow;
     $mw -> geometry('+0+20');
     $mw -> minsize($x_min, $y_min);
@@ -154,7 +111,9 @@ sub tk_mainloop {
 }
 
 sub tk_pulldown_menu {
+
     # menu bar
+
     my $pm = $mw -> Frame -> pack(
         -side => 'top',
         -anchor => 'w',
@@ -196,8 +155,6 @@ sub tk_pulldown_menu {
                                   "element",
                                   "is_covered_by");    
             } ],
-            '-',
-            # [ 'command' => "tk_embed and tk_plot", -command => sub { &tk_embed;&tk_plot; } ],
         ]
     ) -> pack(
         -anchor => 'nw',
@@ -226,19 +183,6 @@ sub tk_pulldown_menu {
         -side => 'left',
     );
 
-    my $menu_71 = $pm -> Menubutton( -text => "New sequence",
-        -menuitems => [
-            [ 'command' => "hypercube intialise", -command => sub { &hypercube_initialise } ],
-            # [ 'command' => "Tk GUI intialise", -command => sub { &tk_initialise } ],
-            [ 'command' => "tk clear canvas", -command => sub { &tk_clear_canvas } ],
-            [ 'command' => "print \@assy_tree", -command => sub { &print_htree } ],
-            [ 'command' => "HTree to pairs and plot", -command => sub { &replot_hasse } ],
-        ]
-    ) -> pack(
-        -anchor => 'nw',
-        -side => 'left',
-    );
-
     my $menu_90 = $pm -> Menubutton( -text => "Help",
         -state => 'normal',
         -menuitems => [
@@ -251,101 +195,17 @@ sub tk_pulldown_menu {
     );
 }
 
-sub replot_hasse {
-    &hypercube_initialise;
-    my @parent_child_pair = &htree_to_pairs(@assy_tree);  # was in &file_open
-
-    # in the place of &big_bundle
-    my ($ref_assembly, $ref_has_parent) = &step_produce_assembly_has_parent(@parent_child_pair);
-    &delete_tree;
-    &insert_tree_items(@assy_tree);
-    my $ref_array = &hypercube_get_array;  # in the place of &hypercube_corresponding_to_step_file
-    my ($ref_array_with_coords, $ref_hash_id_lookup_to_array) = &tk_hasse($ref_array);
-
-    # in the place of &plotting_overall
-    &tk_setup_initial_colour_for_covered_by;
-    &tk_setup_initial_colour_for_elements;
-    &tk_optimise;
-    &tk_embed_height_0;
-    &tk_embed_height_n(@parent_child_pair);
-
-    &tk_highlight_relations(@parent_child_pair);
-    &tk_highlight_is_covered_by;
-    &tk_clear_canvas;
-    &tk_plot_is_covered_by;
-    &tk_plot_elements;
-    &tk_display_order("element_highlighted",
-                      "is_covered_by_highlighted",
-                      "element",
-                      "is_covered_by");    
-}
-
-sub XXX_print_hash_lookup_array_coords {
-    my ($ref_1, $ref_2) = @_;
-    my %hash_id_lookup_to_array = %{$ref_1};
-    my @array_with_coords = @{$ref_2};
-    print "print_hush_lookup_array_coords\n";
-    foreach my $h (0..$#array_with_coords) {    # at height h
-        my @ee = @{$array_with_coords[$h]};
-        foreach my $j (0..$#ee) {
-            my $id = $array_with_coords[$h][$j]{id};
-            my $ref_coords = $array_with_coords[$h][$j]{coords};
-            my $ref_canvas = $array_with_coords[$h][$j]{canvas};
-            print "[$h][$j] $id, @$ref_coords, @$ref_canvas\n";
-        }
-    }
-
-    print "\n";
-    while ( my ($x, $ref_hash) = each %hash_id_lookup_to_array ) {
-        my %hash = %$ref_hash;
-        my $id = $hash{id};
-        my $label = $hash{label};
-        my $coords = $hash{coords};
-        my $canvas = $hash{canvas};
-        
-        print "[$x] $id, $label, @$coords, @$canvas\n";
-    }
-}
-
-sub XXX_print_tree {
+sub print_tree {
     print "print_tree\n";
     my @list = $tree -> child_entries( '', 3);
     print "$_\n" foreach @list;
 }
 
-sub XXX_print_array {
+sub print_array {
     print "print_array\n";
     foreach my $ref (@assy_tree) {
         print "@{$ref}\n";
     }
-}
-
-sub XXX_print_htree {
-    ### i/p - @assy_tree
-    print "print assy tree\n";
-    foreach my $ref (@assy_tree) {
-        my @entities = @{$ref};
-        my $list = CORE::join ' -- ', @entities;
-        print "$list\n";
-    }
-}
-
-sub htree_to_pairs {
-    ### i/p - @assy_tree
-    ### o/p - 
-    # print "htree to pairs\n";
-    my @assy_tree = @_;
-    my @parent_child_pair = ();
-    foreach my $ref (@assy_tree) {
-        my @entities = @{$ref};
-        if ($#entities > 0) {
-            my $child = pop @entities;
-            my $parent = pop @entities;
-            # print "$parent -- $child\n";
-            push @parent_child_pair, [$parent, $child];
-        }
-    }
-    return @parent_child_pair;
 }
 
 sub delete_tree {
@@ -627,9 +487,29 @@ sub tk_lower_frame {
 
 }
 
+### printing and testing
+
+sub tk_print_all_relations {
+    print "tk_print_all_relations\n";
+    foreach my $atom (@atoms) {
+        print "$atom\n";
+    }
+    print "max = $max\n";
+    foreach my $ref (@pairs) {
+        my ($p, $c) = @{$ref};
+        print "$p - $c\n";
+    }
+    print "tree = $tree\n";
+}
+
+sub tk_change_tree {
+    print "change tree\n";
+    $tree -> selectionClear();
+}
+
 ### big bundle
 
-sub XXX_print_pairs {
+sub print_pairs {
     foreach my $ref_parent_child (@_) {
         my ($parent, $child) = @{$ref_parent_child};
         print "$parent, $child\n";
@@ -641,7 +521,7 @@ sub assembly_has_parent_to_Htree {
     ### o/p - assembly tree without dots
     our %assembly   = %{$_[0]};
     our %has_parent = %{$_[1]};
-    our @Htree = ();
+    our @Htree;
     my $top_level_assembly;
     while ( my ($child, $parent) = each %has_parent ) {
         $top_level_assembly = $child unless $parent;
@@ -659,12 +539,51 @@ sub assembly_has_parent_to_Htree {
     }
 }
 
+
+sub big_bundle {
+    my @parent_child_pair = &step_produce_parent_child_pairs;
+    my ($ref_assembly, $ref_has_parent) = &step_produce_assembly_has_parent(@parent_child_pair);
+
+    @assy_tree = &assembly_has_parent_to_Htree($ref_assembly, $ref_has_parent);
+    &insert_tree_items(@assy_tree);
+
+    @atoms = &step_count_atomic_part;
+    my $max = $#atoms + 1;
+    &hypercube_corresponding_to_step_file($max);
+    return $max, @parent_child_pair;
+}
+
+sub tk_setup_initial_colour {
+    &tk_setup_initial_colour_for_covered_by;
+    &tk_setup_initial_colour_for_elements;
+    &tk_optimise;
+}
+
+sub tk_embed {
+    &tk_embed_height_0;
+    &tk_embed_height_n;
+    &tk_highlight_relations;
+    &tk_highlight_is_covered_by;
+}
+
+sub tk_plot {
+    &tk_clear_canvas;
+    &tk_plot_is_covered_by;
+    &tk_plot_elements;
+    &tk_display_order("element_highlighted",
+                      "is_covered_by_highlighted",
+                      "element",
+                      "is_covered_by");    
+}
+
+sub tk_display_order {
+    my @labels = reverse @_;  # from front to back
+    $c -> raise($labels[$_], $labels[$_-1]) for 1..$#labels;
+}
+
 ### file open and save
 
 sub file_open {
-    &step_initialise;
-    &hypercube_initialise;
-    &tk_initialise;
     my $fs = $mw -> FileSelect(
         -initialdir => "../step_data/input",
         -filter => "*.STEP",
@@ -681,343 +600,18 @@ sub file_open {
 
     if ($file) {
         &step_open($file);
-        my @parent_child_pair = &step_produce_parent_child_pairs;
-        $max = &big_bundle(@parent_child_pair);
-        &tk_plotting_overall;
+        ($max, @pairs)  = &big_bundle;
+        &tk_setup_initial_colour;
+        &tk_embed;
+        &tk_plot;
     }
 }
-
-sub XXX_print_assy_tree {
-    my @assy_tree = @_;
-    print "assy_tree\n";
-    print "@$_\n" foreach @assy_tree;
-}
-
-sub big_bundle {
-    my @parent_child_pair = @_;
-    my ($ref_assembly, $ref_has_parent) = &step_produce_assembly_has_parent(@parent_child_pair);
-    @assy_tree = &assembly_has_parent_to_Htree($ref_assembly, $ref_has_parent);
-    &delete_tree;
-    &insert_tree_items(@assy_tree);
-    @atoms = &step_count_atomic_part;
-    my $max = $#atoms + 1;
-    my $ref_array = &hypercube_corresponding_to_step_file($max);
-    &tk_hasse($ref_array);
-    return $max;
-}
-
-sub gui_print_hypercube {
-    print "print_array\n";
-    my $ref = shift;
-    my @array = @{$ref};
-    foreach my $i (0..$#array) {
-        my @list = @{$array[$i]};
-        foreach my $j (0..$#list) {
-            print "\@array[$i][$j] - $array[$i][$j]\n";
-        }
-    }
-}
-
-sub tk_plotting_overall {
-    &tk_setup_initial_colour_for_covered_by;
-    &tk_setup_initial_colour_for_elements;
-    &tk_optimise;
-    &tk_embed_height_0;
-
-    my $ref = &step_parent_child_pair;
-    my @parent_child_pair = @$ref;
-
-    &tk_embed_height_n(@parent_child_pair);
-    &tk_highlight_relations(@parent_child_pair);
-    &tk_highlight_is_covered_by;
-    &tk_clear_canvas;
-    &tk_plot_is_covered_by;
-    &tk_plot_elements;
-    &tk_display_order("element_highlighted",
-                      "is_covered_by_highlighted",
-                      "element",
-                      "is_covered_by");    
-}
-
-sub tk_setup_initial_colour_for_covered_by {
-    while (my ($child, $ref_hash) = each %hash_id_lookup_to_array) {
-        my $ref_parents = &get_parents($child);
-        foreach my $parent (@$ref_parents) {
-            my ($x1, $y1, $z1) = @{$hash_id_lookup_to_array{$child} {canvas}};
-            my ($x2, $y2, $z2) = @{$hash_id_lookup_to_array{$parent}{canvas}};
-            $is_covered_by{$child}{$parent}{colour} = 'gray75';
-            $is_covered_by{$child}{$parent}{width} = 1;
-            $is_covered_by{$child}{$parent}{active} = 0;
-        }
-    }
-}
-
-sub tk_setup_initial_colour_for_elements {
-    foreach my $h (0..$#array_with_coords) {
-        my @elements = @{$array_with_coords[$h]};
-        foreach my $j (0..$#elements) {
-            $array_with_coords[$h][$j]{colour} = 'gray95';    # fill circles, same as background
-            $array_with_coords[$h][$j]{active} = 0;
-        }
-    }
-}
-
-sub tk_optimise {
-    $zeros = 0;
-    $iterations = 0;
-    my $number_of_times = 9999;
-    my $start_time = time;
-
-    $quit_optimisation = 0;    # need to sort out needing to multiple "Quit" button clicks
-    LABEL: while ($zeros <= 2) {    # consider optimised when three sets of 10,000 zeros
-        $counter = 0;
-        foreach (0..$number_of_times) {
-            my $element_count = 1 << $max;    # equivalent to 2**max
-            my $n = int rand() * $element_count;
-            my $height = &tk_hamming_weight($n);
-            my @list = &hypercube_elements_at_height($height);
-            my $m = $list[int rand() * ($#list + 1)];
-            unless ($n == 0 or
-                    $n == $element_count - 1 or
-                    $n == $m) {
-                if ( &tk_if_n_bigger_than_m($n, $m) ) {
-                    $counter++;
-                    &tk_swap($n, $m);
-                }
-            };
-        }
-        $percentage = sprintf "%.2f", (int $counter/$number_of_times * 10000) / 100;
-        $status -> update;
-        $iterations++;
-        $zeros++;
-        $zeros = 0 if $counter;
-        last LABEL if $quit_optimisation or time - $start_time > 10;    # Quit button pressed or elapsed time more than 10 seconds
-    }
-    &tk_turn_off_is_covered_by;  # see what happens
-}
-
-sub tk_embed_height_0 {
-   ### consider 2^n hypercube when height = 0
-   my ($e) = &hypercube_elements_at_height(0);
-   $hash_id_lookup_to_array{$e}{label} = "0";
-   $hash_id_lookup_to_array{$e}{active} = 1;
-   %embedded = ();
-   $embedded{0} = 0;
-}
-
-sub print_hash {
-    my $ref = shift;
-    my %hash = %$ref;
-    foreach my $key (keys %hash) {
-        print "hash - $key - $hash{$key}\n" if $hash{$key};
-    }
-}
-
-sub tk_embed_height_n {
-    # print "tk_embed_height_n\n";
-    my @parent_child_pair = @_;
-    # &print_pairs(@parent_child_pair);
-    # print "\n";
-
-    ### setting up %assembly and %has_parent using @parent_child_pair
-    my ($ref_assembly, $ref_has_parent) = &step_produce_assembly_has_parent(@parent_child_pair);
-    our %assembly = %$ref_assembly;
-    our %has_parent = %$ref_has_parent;
-
-    ### consider 2^n hypercube when height = 1 to supremum
-    my @height_n = &hypercube_elements_at_height(1);
-    %lookup_label_to_id = ();
-
-    ### consider 2^n hypercube when height = n
-    my $top_level_assembly = &find_top_level_assembly(@parent_child_pair);
-    # print "... top level = $top_level_assembly\n";
-    # print "atoms = @atoms\n";   # global var NG, need to generate on the fly - 19/5/17
-
-    ### consider 2^n hypercube when height = 2 .. n-1
-    ### set up atoms as available for embedding $embedded{$e}=1
-    # %embedded set to empty by &tk_embed_height_0
-    %parts_at_height_n = ();
-    for (my $i=0; $i<=$#atoms; $i++) {
-        my $atom = $atoms[$i];
-        $embedded{$atom} = 1;
-        $parts_at_height_n{$atom} = 1;
-
-        # my $element = $height_n[$i];
-        # print "$atom - $element\n";
-        # $hash_id_lookup_to_array{$element}{label} = $atom;    # need to do dynamically
-    }
-
-    ### embed thingies
-    ### need tidying up - HHC 2017-01-05
-    FIRST_ATTEMPT:
-        # &print_hash(\%embedded);
-        my @list = &tk_to_be_embedded_list(\%embedded);
-        # print "1st available \@list = @list\n";
-        # correct up to here - 19 May midday
-        # &tk_embed_height_n has no problem at all - 19 May
-
-    SECOND_ATTEMPT: my ($first) = @list;
-        # print "2nd available \@list = @list\n";
-        # okay up to 1st and 2nd attempts
-    return if $first eq $top_level_assembly;  # EXIT subroutine if supremum is the only element left in @list
-    my @siblings = &siblings($first);
-    my $parent = &parent($first);
-
-    if ( &check_if_all_exists(@siblings) ) {
-        foreach my $sibling (@siblings) {
-            # print "sibling $sibling\n";
-            $embedded{$sibling} = 0;
-            if (defined $parts_at_height_n{$sibling}) {
-                my $id = &next_available_height_n($sibling, @height_n);
-                $lookup_label_to_id{$sibling} = $id;
-            }
-            $embedded{$parent} = 1;
-        }
-
-        my @bundle_of_ids = ();
-        foreach my $part (@siblings) {
-            my $id = $lookup_label_to_id{$part};
-            push @bundle_of_ids, $id;
-        }
-
-        unless ($first eq $top_level_assembly) {
-            my $join = &join(@bundle_of_ids);
-            $hash_id_lookup_to_array{$join}{label} = $parent;
-            $lookup_label_to_id{$parent} = $join;
-        }
-
-    } else {
-        my $swap = shift @list;
-        push @list, $swap;
-        goto SECOND_ATTEMPT;
-    }  # end if all siblings exists and are ready
-
-    $embedded{ &parent($first) } = 1 if &parent($first);
-    goto FIRST_ATTEMPT;
-}
-
-sub tk_highlight_relations {
-    ### highlight most
-    # my $ref_parent_child_pair = &step_parent_child_pair;
-    # my @parent_child_pair = @{$ref_parent_child_pair};
-    my @parent_child_pair = @_;
-    foreach my $ref_one_pair (@parent_child_pair) {
-        my ($parent, $child) = @{$ref_one_pair};
-        my $p_id = $lookup_label_to_id{$parent};
-        my $c_id = $lookup_label_to_id{$child};
-        my @chain = &hypercube_return_chain($p_id, $c_id);
-
-        for (my $i=0; $i<$#chain; $i++) {
-            # print "$chain[$i] - $chain[$i+1]\n";
-            $is_covered_by{$chain[$i+1]}{$chain[$i]}{colour} = 'black';
-            $is_covered_by{$chain[$i+1]}{$chain[$i]}{width} = $hightlighted_width_is_covered_by;
-            $is_covered_by{$chain[$i+1]}{$chain[$i]}{active} = 1;
-        }
-    }
-
-    ### highlight inf=zero to atom[s]
-    @available_atoms_n_subassemblies = @atoms;
-    foreach my $atom (@atoms) {
-        my $id = $lookup_label_to_id{$atom};
-        $is_covered_by{0}{$id}{colour} = 'black';
-        $is_covered_by{0}{$id}{width} = $hightlighted_width_is_covered_by;
-        $is_covered_by{0}{$id}{active} = 1;
-    }
-}
-
-sub tk_highlight_is_covered_by {
-    # o/p - changes to %array_with_coords
-    foreach my $h (0..$#array_with_coords) {
-        my @elements = @{$array_with_coords[$h]};
-        foreach my $j (0..$#elements) {
-            if ($array_with_coords[$h][$j]{label}) {
-                $array_with_coords[$h][$j]{colour} = 'black';
-                $array_with_coords[$h][$j]{active} = 1;
-            }
-        }
-    }
-    ### zero as well
-    $array_with_coords[0][0]{colour} = 'black';
-    $array_with_coords[0][0]{width} = $hightlighted_width_is_covered_by;
-}
-
-sub tk_clear_canvas {
-    $c -> delete("is_covered_by", "element", "element_id", "element_label", "is_covered_by_highlighted", "element_highlighted");
-}
-
-sub tk_plot_is_covered_by {
-    while (my ($child, $ref_hash) = each %hash_id_lookup_to_array) {
-        my $ref_parents = &get_parents($child);
-        foreach my $parent (@$ref_parents) {
-            my ($x1, $y1, $z1) = @{$hash_id_lookup_to_array{$child} {canvas}};
-            my ($x2, $y2, $z2) = @{$hash_id_lookup_to_array{$parent}{canvas}};
-            $is_covered_by{$child}{$parent}{entity} = $c->createLine($x1, $y1, $x2, $y2,
-                -tags =>  $is_covered_by{$child}{$parent}{active} ? "is_covered_by_highlighted" : "is_covered_by",
-                -fill =>  $is_covered_by{$child}{$parent}{colour},
-                -width => $is_covered_by{$child}{$parent}{width},
-                -activefill => 'red',
-                -activewidth => $activewidth_is_covered_by,
-            );
-        }
-    }
-}
-
-sub tk_plot_elements {
-    foreach my $h (0..$#array_with_coords) {
-        my @elements = @{$array_with_coords[$h]};
-        foreach my $j (0..$#elements) {
-            my $id = $array_with_coords[$h][$j]{id};
-            my $ref_coords = $array_with_coords[$h][$j]{coords};
-            my $ref_canvas = $array_with_coords[$h][$j]{canvas};
-            my ($x, $y, $z) = @$ref_canvas;    # centre
-            my $x1 = $x - $element_radius;     # left
-            my $x2 = $x + $element_radius;     # right
-            my $y1 = $y + $element_radius;     # lower
-            my $y2 = $y - $element_radius;     # upper
-
-            $element{$id} = $c -> createOval($x1, $y1, $x2, $y2,
-                -tags =>    $array_with_coords[$h][$j]{active} ? "element_highlighted" : "element",
-                -outline => $array_with_coords[$h][$j]{active} ? 'black' : 'gray75',    # outline of circles
-                -fill =>    $array_with_coords[$h][$j]{colour},
-                -activeoutline => 'red',
-                -activefill =>    'red',
-            );                                 # lower-left, upper-right
-
-            $element_id{$id} = $c -> createText($x2 - $element_radius, $y2 - $element_radius,
-                -text => $array_with_coords[$h][$j]{id},
-                -tags => $array_with_coords[$h][$j]{active} ? "element_highlighted" : "element",
-                -fill => 'gray75',    # text colour of inactive labels
-                -font => 'Times 10',
-                -anchor => 's',
-            );
-
-            if ($array_with_coords[$h][$j]{label}) {
-                $element_label{$id} = $c -> createText($x2 + $element_radius*2 , $y1 + $element_radius*2,
-                    -text => $array_with_coords[$h][$j]{label},
-                    -tags => "element_label",
-                    -fill => 'black',
-                    -font => 'Helvetica 20',
-                );
-            }
-        }
-    }
-}
-
-sub tk_display_order {
-    my @labels = reverse @_;  # from front to back
-    $c -> raise($labels[$_], $labels[$_-1]) for 1..$#labels;
-}
-
-### end open file
-### begin save file
 
 sub create_new_assy {
-    # i/p - $tree
-    # o/p - \@new
-    my $tree = shift;
+    # print "... create_new_assy\n";
     my @list = ();
     ### first pass
-    foreach my $entry ( $tree -> child_entries( '', 999) ) {
+    foreach my $entry ( $tree -> child_entries( '', 20) ) {
         push @list, [split '\.', $entry];
     }
     ### second pass
@@ -1042,6 +636,10 @@ sub create_new_assy {
     ### third pass
     foreach my $ref (@new) {
         unshift @{$ref}, pop @{$ref};
+    }
+    ### fourth pass
+    foreach my $ref (@new) {
+        print "@{$ref}\n";
     }
     return \@new;
 }
@@ -1088,9 +686,11 @@ sub print_tree_items {
 sub insert_tree_items {
     ### i/p - @Htree
     ### o/p - $tree Tk gui
+    # print ">>> insert_tree_items\n";
     foreach my $ref (@_) {
         my @list = @{$ref};
         my $end = $list[$#list];
+        # print "@list [$end]\n";
         $tree -> add(
             CORE::join( '.', @list),    # clash hypercube &core()
             -text => $end,
@@ -1098,13 +698,6 @@ sub insert_tree_items {
     }
     $tree -> autosetmode;
     $tree -> focusFollowsMouse;
-    $tree -> configure(
-        -selectmode => 'extended',
-        -selectbackground => 'LightBlue2',
-        -browsecmd => [\&browse_entry],
-        # -closecmd => [\&browse, "close"], 
-        # -opencmd => [\&browse, "open"], 
-    );
 }
 
 sub print_B3 {
@@ -1121,6 +714,55 @@ sub print_B2 {
 
 sub print_mousewheel {
     print "print_mousewheel\n";
+}
+
+sub XXX_insert_tree_items {
+    ### can't handle duplicate part name at the moment, need to add suffix when reading step file
+    ### i/p - ref of %assembly
+    ###     - ref of %has_parent
+    ### o/p - $tree Tk gui
+    my @items = @_;
+    foreach my $ref_list (@items) {
+        my ($name, $item) = @{$ref_list};
+        # print "$name $item\n";
+        $entity{$name} = $tree -> add($item,
+            -text => $name,
+        );
+    }
+    $tree -> autosetmode;
+    $tree -> focusFollowsMouse;
+    $tree -> configure(-browsecmd => \&select_entry ); 
+}
+
+sub XXX_produce_tree {
+    ### i/p - ref of %assembly
+    ###     - ref of %has_parent
+    ### o/p - @hlist
+    our @hlist;
+    our %assembly  = %{$_[0]};
+    my %has_parent = %{$_[1]};
+    while (my ($top_level_parent, $null) = each %has_parent) {
+        unless ($null) {
+            my $level = 0;
+            push @hlist, [$top_level_parent, $top_level_parent];
+            &produce_sub_tree(\@{$assembly{$top_level_parent}}, $level, $top_level_parent);
+        }
+    }
+    return @hlist;
+}
+
+sub XXX_produce_sub_tree {
+    ### for each sub-tree, iteratively
+    my ($ref_children, $last_level, $last_path) = @_;
+    my @children = @{$ref_children};
+    my $new_path;
+    our %assembly;
+    our @hlist;
+    foreach my $child (@children) {
+        my $new_path = $last_path . "." . $child;
+        push @hlist, [$child, $new_path];
+        &produce_sub_tree(\@{$assembly{$child}}, $last_level + 1, $new_path);
+    }
 }
 
 sub select_entry {
@@ -1196,32 +838,38 @@ sub click_entry {
         $popup -> destroy;
         &delete_tree;
         &insert_tree_items(@assy_tree);
-        &replot_hasse;
     }
+}
+
+### PROCESS TREE ENTITY(IES)
+sub tk_callback_entity_browse {
+    ### First button Tree entity callback
+    # enter - item 0 imagetext body
+    # leave - item
+    my $this_entity_name = shift @_;
+    if (@_) {
+        # print "B1 -- $entity_focused @list\n";
+        ($entity_focused, my @parents) = &tk_entity_strip($this_entity_name);
+        $selected_entry = $entity_focused;
+        print "$entity_focused\n";
+        print "    $_\n" for @parents;
+        my @siblings = &tk_siblings($entity_focused);
+        my $parent = &tk_parent($entity_focused);
+        my @children = &covers($entity_focused);
+        print "    who is my parent? >$parent<\n" if $parent;
+        print "    who are my siblings? >@siblings<\n";
+        print "    who are my children? >@children<\n";
+    };    
+}
+
+sub tk_entity_strip {
+    my $input = shift;
+    my @list = split /\./, $input;
+    my $entity = pop @list;
+    return $entity, reverse @list;
 }
 
 ### call backs
-
-sub browse_entry {
-    my @list = split '\.', shift;
-    $entry_under_cursor = pop @list;
-    # print "$entry_under_cursor\n";
-}
-
-sub tk_callback_B1 {
-    my ($widget, $event, $motion, @list) = @_;
-    # my $entry = $widget -> rooty;
-    if ($motion eq "Press") {
-        # print "> $entry_under_cursor\n";
-        $entry_first_selected = $entry_under_cursor;
-        $entry_second_selected = "";
-    } elsif ($motion eq "Release") {
-        # print ". $entry_under_cursor\n";
-        $entry_second_selected = $entry_under_cursor;
-    } else {
-        # print "error...\n";
-    }
-}
 
 sub tk_callback_B2 {
     my @list = @_;
@@ -1230,11 +878,7 @@ sub tk_callback_B2 {
 
 sub tk_callback_tree{
     my @list = @_;
-    # print "B3 tk_callback_tree - @list\n";
-    my @selection = $tree -> info("selection");
-    print "*** selection ***\n";
-    print "$_\n" foreach @selection;
-    print "\n";
+    print "B3 tk_callback_tree - @list\n";
 }
 
 sub tk_callback_entity {
@@ -1300,41 +944,21 @@ sub tk_assembly_tree {
         -expand => 1,
     );
 
-    $tree -> bind('<ButtonPress-1>'           => [\&tk_callback_B1, "Button",         "Press"]);
-    $tree -> bind('<ButtonRelease-1>'         => [\&tk_callback_B1, "Button",         "Release"]);
-    $tree -> bind('<Control-ButtonPress-1>'   => [\&tk_callback_B1, "Control-Button", "Press"]);
-    $tree -> bind('<Control-ButtonRelease-1>' => [\&tk_callback_B1, "Control-Button", "Release"]);
-    $tree -> bind('<Shift-ButtonPress-1>'     => [\&tk_callback_B1, "Shift-Button",   "Press"]);
-    $tree -> bind('<Shift-ButtonRelease-1>'   => [\&tk_callback_B1, "Shift-Button",   "Release"]);
     $tree -> bind('<Button-2>' => [\&tk_callback_B2, 'qwerty' ]);
     $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
-    # $tree -> bind('<MouseWheel>' => [\&print_mousewheel]);
+    $tree -> bind('<MouseWheel>' => [\&print_mousewheel]);
 
-    $f_tree -> Entry(
-        -text => "Entry under cursor",
-        -state => 'disable',
-        -relief => 'flat',
-    ) -> pack;
-    $f_tree -> Entry(
-        -textvariable => \$entry_under_cursor,
-    ) -> pack;
-    $f_tree -> Entry(
-        -text => "First entry selected",
-        -state => 'disable',
-        -relief => 'flat',
-    ) -> pack;
-    $f_tree -> Entry(
-        -textvariable => \$entry_first_selected,
-    ) -> pack;
-    $f_tree -> Entry(
-        -text => "Second entry selected",
-        -state => 'disable',
-        -relief => 'flat',
-    ) -> pack;
-    $f_tree -> Entry(
-        -textvariable => \$entry_second_selected,
-    ) -> pack;
+=ccc
+    my $f_assy = $f_tree -> Frame(
+        -width => 60,
+        -label => "Create new assembly structure",
+    ) -> pack(
+        -fill => 'both',
+        -side => 'top',
+        -expand => 1,
 
+    );
+=cut
     ###
 
     my $box = $f_tree -> Frame(
@@ -1411,6 +1035,74 @@ sub tk_assembly_tree {
     my $b4  = $balloons -> attach($button4,  -balloonmsg => "Scroll to Bottom", -statusmsg => "Status bar message");
     my $b2  = $balloons -> attach($button2,  -balloonmsg => "Move Level Up", -statusmsg => "Status bar message");
     my $b3  = $balloons -> attach($button3,  -balloonmsg => "Move Level Down", -statusmsg => "Status bar message");
+=ccc
+    ### Frame for new assembly structure
+    my $ff_part_assy_names = $f_assy -> Frame (
+    ) -> pack(
+        -fill => 'both',
+        -side => 'left',
+        -expand => 1,
+    );
+
+    ###
+
+    my $ff_parts_array = $ff_part_assy_names -> Scrolled('Listbox',
+        -scrollbars => 'se',
+        -height => 6,
+        # -width => 20,
+    ) -> pack(
+        -side => 'top',
+        -fill => 'x',
+    );
+
+    $ff_parts_array -> bind('<<ListboxSelect>>' => [
+        \&tk_ff_parts_array_select_part,
+        "dadsds",
+    ]);
+
+    sub tk_ff_parts_array_select_part{
+        my @part = @_;
+        my @index = $part[0] -> curselection;
+        $chosen_index = $index[0];
+        $chosen_part = $available_atoms_n_subassemblies[$index[0]];
+        # print "adsadfafsa - @part - $chosen_index - $chosen_part\n";
+        $ff_button_parts -> configure(-state => 'normal');
+    }
+
+    $ff_parts_array -> insert('end', @available_atoms_n_subassemblies );
+    tie @available_atoms_n_subassemblies, "Tk::Listbox", $ff_parts_array;
+
+    $ff_button_parts = $ff_part_assy_names -> Button(
+        -text => "SELECT parts and/or sub-assemblies",
+        -command => [\&tk_button_parts, "tk button parts"],
+        -state => 'disabled',
+    ) -> pack (
+        -side => 'top',
+        -expand => 1,
+        -fill => 'x',
+    );
+
+    ###
+
+    my $ff_assy_name = $ff_part_assy_names -> Scrolled('Entry',
+        -textvariable => \$new_assy_name,
+        -scrollbars => 's',
+    ) -> pack(
+        -side => 'top',
+        -fill => 'x',
+    );
+
+    $ff_button_assy = $ff_part_assy_names -> Button(
+        -text => "CREATE a new sub- (or top level) assembly",
+        -command => [\&tk_button_assy, "tk button assy"],
+        -state => 'disabled',
+    ) -> pack (
+        -side => 'top',
+        -expand => 1,
+        -fill => 'x',
+    );
+=cut
+    ###
 }
 
 ### button callbacks
@@ -1425,6 +1117,26 @@ sub tk_button_parts {
     $new_assy_name = "assy_" . $assy_counter;
     $ff_button_assy -> configure (-state => 'normal') if $#list_of_assembly_parts > 0;
     $ff_button_parts -> configure(-state => 'disabled');
+}
+
+sub XXX_tk_button_assy {
+    # print "@list_of_assembly_parts ($new_assy_name)\n";
+    if ($new_assy_name =~ /^(?:[A-Za-z0-9_-]+,?)+(?<!,)$/) {
+        # print "good\n";
+        $info -> insert( 'end', qq(Sub-assembly "$new_assy_name" is created with part(s)/subassembly(ies) "@list_of_assembly_parts"\n), );
+        push @available_atoms_n_subassemblies, $new_assy_name if @available_atoms_n_subassemblies;
+        push my @assy_list_of_list, [$new_assy_name, @list_of_assembly_parts];
+        @list_of_assembly_parts = ();
+        $assy_counter++;
+        $ff_button_assy -> configure (-state => 'disabled');
+        $info -> insert( 'end', qq(All done. Click "Save -> Save STEP file" to output an AP214 file.) ) if not @available_atoms_n_subassemblies;
+        $info -> see('end');
+    } else {
+        # print "bad\n";
+        $info -> insert( 'end', "ERROR: Valid chars are A-Z a-z 0-9 _ -.  Please re-enter new assembly name\n");
+        $info -> insert( 'end', qq(Current selected part(s)/subassembly(ies) are "@list_of_assembly_parts"\n), );
+        $info -> see('end');
+    }
 }
 
 ### middle canvas
@@ -1442,8 +1154,6 @@ sub tk_canvas {
     );
 }
 
-
-
 ###
 ### callbacks
 ###
@@ -1456,6 +1166,57 @@ sub tk_button_callback {
 ###
 ### subroutines
 ###
+
+sub tk_highlight_is_covered_by {
+    foreach my $h (0..$#array_with_coords) {
+        my @elements = @{$array_with_coords[$h]};
+        foreach my $j (0..$#elements) {
+            if ($array_with_coords[$h][$j]{label}) {
+                $array_with_coords[$h][$j]{colour} = 'black';
+                $array_with_coords[$h][$j]{active} = 1;
+            }
+        }
+    }
+    ### zero as well
+    $array_with_coords[0][0]{colour} = 'black';
+    $array_with_coords[0][0]{width} = $hightlighted_width_is_covered_by;
+}
+
+sub tk_highlight_relations {
+    ### highlight most
+    my $ref_parent_child_pair = &step_parent_child_pair;
+    my @parent_child_pair = @{$ref_parent_child_pair};
+    foreach my $ref_one_pair (@parent_child_pair) {
+        my ($parent, $child) = @{$ref_one_pair};
+        my $p_id = $lookup_label_to_id{$parent};
+        my $c_id = $lookup_label_to_id{$child};
+        my @chain = &hypercube_return_chain($p_id, $c_id);
+
+        for (my $i=0; $i<$#chain; $i++) {
+            # print "$chain[$i] - $chain[$i+1]\n";
+            $is_covered_by{$chain[$i+1]}{$chain[$i]}{colour} = 'black';
+            $is_covered_by{$chain[$i+1]}{$chain[$i]}{width} = $hightlighted_width_is_covered_by;
+            $is_covered_by{$chain[$i+1]}{$chain[$i]}{active} = 1;
+        }
+    }
+
+    ### highlight inf=zero to atom[s]
+    @available_atoms_n_subassemblies = @atoms;
+    foreach my $atom (@atoms) {
+        my $id = $lookup_label_to_id{$atom};
+        $is_covered_by{0}{$id}{colour} = 'black';
+        $is_covered_by{0}{$id}{width} = $hightlighted_width_is_covered_by;
+        $is_covered_by{0}{$id}{active} = 1;
+    }
+}
+
+sub tk_embed_height_0 {
+   ### consider 2^n hypercube when height = 0
+   my ($e) = &hypercube_elements_at_height(0);
+   $array_lookup_id_to_hash{$e}{label} = "0";
+   $array_lookup_id_to_hash{$e}{active} = 1;
+   $embedded{0} = 0;
+}
 
 sub fisher_yates_shuffle {
     # Perl Cookbook 4.17. Randomizing an Array
@@ -1470,19 +1231,82 @@ sub fisher_yates_shuffle {
     }
 }
 
+sub tk_embed_height_n {
+    ### consider 2^n hypercube when height = 1 to supremum
+    my @height_n = &hypercube_elements_at_height(1);
+
+    ### consider 2^n hypercube when height = n
+    my $top_level_assembly = &step_top_level_assembly;
+
+    ### consider 2^n hypercube when height = 2 .. n-1
+    ### set up atoms as available for embedding $embedded{$e}=1
+    for (my $i=0; $i<=$#atoms; $i++) {
+        my $atom = $atoms[$i];
+        my $element = $height_n[$i];
+        # print "$atom - $element\n";
+        # $array_lookup_id_to_hash{$element}{label} = $atom;    # need to do dynamically
+        $embedded{$atom} = 1;
+        $parts_at_height_n{$atom} = 1;
+    }
+
+    ### embed thingies
+    ### need tidying up - HHC 2017-01-05
+    FIRST_ATTEMPT:  my @list = &tk_to_be_embedded_list;
+                    # &fisher_yates_shuffle( \@list );  # seems okay-ish
+
+    SECOND_ATTEMPT: my ($first) = @list;
+    return if $first eq $top_level_assembly;  # EXIT subroutine if supremum is the only element left in @list
+    my @siblings = &tk_siblings($first);
+    # &fisher_yates_shuffle( \@siblings );  # not here
+    my $parent = &tk_parent($first);
+
+    if ( &tk_check_if_all_exists(@siblings) ) {
+        foreach my $sibling (@siblings) {
+            # print "sibling $sibling\n";
+            $embedded{$sibling} = 0;
+            if (defined $parts_at_height_n{$sibling}) {
+                my $id = &next_available_height_n($sibling, @height_n);
+                $lookup_label_to_id{$sibling} = $id;
+            }
+            $embedded{$parent} = 1;
+        }
+
+        my @bundle_of_ids;
+        foreach my $part (@siblings) {
+            my $id = $lookup_label_to_id{$part};
+            push @bundle_of_ids, $id;
+        }
+
+        unless ($first eq $top_level_assembly) {
+            my $join = &join(@bundle_of_ids);
+            $array_lookup_id_to_hash{$join}{label} = $parent;
+            $lookup_label_to_id{$parent} = $join;
+        }
+
+    } else {
+        my $swap = shift @list;
+        push @list, $swap;
+        goto SECOND_ATTEMPT;
+    }  # end if all siblings exists and are ready
+
+    $embedded{ &tk_parent($first) } = 1 if &tk_parent($first);
+    goto FIRST_ATTEMPT;
+}
+
 sub next_available_height_n {
     my $sibling = shift;
     my @list = @_;
+    # &fisher_yates_shuffle( \@list );   # sounds good but actually not a good idea (more options)
     foreach my $element (@list) {
-        my $label = $hash_id_lookup_to_array{$element}{label};        
+        my $label = $array_lookup_id_to_hash{$element}{label};        
         unless ($label) {
-            $hash_id_lookup_to_array{$element}{label} = $sibling;
+            $array_lookup_id_to_hash{$element}{label} = $sibling;
             return $element;
         }
     }
 }
 
-sub check_if_all_exists {
+sub tk_check_if_all_exists {
     my @siblings = @_;
     my $all_exists = 1;
     foreach my $siblings (@siblings) {
@@ -1492,16 +1316,14 @@ sub check_if_all_exists {
 }
 
 sub tk_to_be_embedded_list {
-    my $ref = shift;
-    my %embedded = %$ref;
-    my @list = ();
+    my @list;
     while (my ($part, $available) = each %embedded) {
         push @list, $part if $available;
     }
     return @list;
 }
 
-sub siblings {
+sub tk_siblings {
     my $element = shift;
     my @siblings;
     if (&is_covered_by($element)) {
@@ -1512,21 +1334,36 @@ sub siblings {
     return @siblings;
 }
 
-sub parent {
+sub tk_parent {
     my $element = shift;
     return &is_covered_by($element);
 }
 
-sub is_covered_by {
-    our %has_parent;
-    my $child = shift;
-    return $has_parent{$child};
+sub tk_clear_canvas {
+    $c -> delete("is_covered_by", "element", "element_id", "element_label", "is_covered_by_highlighted", "element_highlighted");
 }
 
-sub covers {
-    our %assembly;
-    my $parent = shift;
-    return @{$assembly{$parent}}
+sub tk_setup_initial_colour_for_covered_by {
+    while (my ($child, $ref_hash) = each %array_lookup_id_to_hash) {
+        my $ref_parents = &get_parents($child);
+        foreach my $parent (@$ref_parents) {
+            my ($x1, $y1, $z1) = @{$array_lookup_id_to_hash{$child} {canvas}};
+            my ($x2, $y2, $z2) = @{$array_lookup_id_to_hash{$parent}{canvas}};
+            $is_covered_by{$child}{$parent}{colour} = 'gray75';
+            $is_covered_by{$child}{$parent}{width} = 1;
+            $is_covered_by{$child}{$parent}{active} = 0;
+        }
+    }
+}
+
+sub tk_setup_initial_colour_for_elements {
+    foreach my $h (0..$#array_with_coords) {
+        my @elements = @{$array_with_coords[$h]};
+        foreach my $j (0..$#elements) {
+            $array_with_coords[$h][$j]{colour} = 'gray95';    # fill circles, same as background
+            $array_with_coords[$h][$j]{active} = 0;
+        }
+    }
 }
 
 sub tk_turn_off_is_covered_by {
@@ -1539,7 +1376,96 @@ sub tk_turn_on_is_covered_by {
     $c -> itemconfigure("element", -state => 'normal');
 }
 
+sub tk_plot_is_covered_by {
+    while (my ($child, $ref_hash) = each %array_lookup_id_to_hash) {
+        my $ref_parents = &get_parents($child);
+        foreach my $parent (@$ref_parents) {
+            my ($x1, $y1, $z1) = @{$array_lookup_id_to_hash{$child} {canvas}};
+            my ($x2, $y2, $z2) = @{$array_lookup_id_to_hash{$parent}{canvas}};
+            $is_covered_by{$child}{$parent}{entity} = $c->createLine($x1, $y1, $x2, $y2,
+                -tags =>  $is_covered_by{$child}{$parent}{active} ? "is_covered_by_highlighted" : "is_covered_by",
+                -fill =>  $is_covered_by{$child}{$parent}{colour},
+                -width => $is_covered_by{$child}{$parent}{width},
+                -activefill => 'red',
+                -activewidth => $activewidth_is_covered_by,
+            );
+        }
+    }
+}
+
+sub tk_plot_elements {
+    foreach my $h (0..$#array_with_coords) {
+        my @elements = @{$array_with_coords[$h]};
+        foreach my $j (0..$#elements) {
+            my $id = $array_with_coords[$h][$j]{id};
+            my $ref_coords = $array_with_coords[$h][$j]{coords};
+            my $ref_canvas = $array_with_coords[$h][$j]{canvas};
+            my ($x, $y, $z) = @$ref_canvas;    # centre
+            my $x1 = $x - $element_radius;     # left
+            my $x2 = $x + $element_radius;     # right
+            my $y1 = $y + $element_radius;     # lower
+            my $y2 = $y - $element_radius;     # upper
+
+            $element{$id} = $c -> createOval($x1, $y1, $x2, $y2,
+                -tags =>    $array_with_coords[$h][$j]{active} ? "element_highlighted" : "element",
+                -outline => $array_with_coords[$h][$j]{active} ? 'black' : 'gray75',    # outline of circles
+                -fill =>    $array_with_coords[$h][$j]{colour},
+                -activeoutline => 'red',
+                -activefill =>    'red',
+            );                                 # lower-left, upper-right
+
+            $element_id{$id} = $c -> createText($x2 + $element_radius , $y2 - $element_radius,
+                -text => $array_with_coords[$h][$j]{id},
+                -tags => $array_with_coords[$h][$j]{active} ? "element_highlighted" : "element",
+                -fill => 'gray75',    # text colour of inactive labels
+            );
+
+            if ($array_with_coords[$h][$j]{label}) {
+                $element_label{$id} = $c -> createText($x2 + $element_radius , $y1 + $element_radius,
+                    -text => $array_with_coords[$h][$j]{label},
+                    -tags => "element_label",
+                    -fill => 'black',
+                );
+            }
+        }
+    }
+}
+
 ###
+
+sub tk_optimise {
+    $zeros = 0;
+    $iterations = 0;
+    my $number_of_times = 9999;
+    my $start_time = time;
+
+    $quit_optimisation = 0;    # need to sort out needing to multiple "Quit" button clicks
+    LABEL: while ($zeros <= 2) {    # consider optimised when three sets of 10,000 zeros
+        $counter = 0;
+        foreach (0..$number_of_times) {
+            my $element_count = 1 << $max;    # equivalent to 2**max
+            my $n = int rand() * $element_count;
+            my $height = &tk_hamming_weight($n);
+            my @list = &hypercube_elements_at_height($height);
+            my $m = $list[int rand() * ($#list + 1)];
+            unless ($n == 0 or
+                    $n == $element_count - 1 or
+                    $n == $m) {
+                if ( &tk_if_n_bigger_than_m($n, $m) ) {
+                    $counter++;
+                    &tk_swap($n, $m);
+                }
+            };
+        }
+        $percentage = sprintf "%.2f", (int $counter/$number_of_times * 10000) / 100;
+        $status -> update;
+        $iterations++;
+        $zeros++;
+        $zeros = 0 if $counter;
+        last LABEL if $quit_optimisation or time - $start_time > 10;    # Quit button pressed or elapsed time more than 10 seconds
+    }
+    &tk_turn_off_is_covered_by;  # see what happens
+}
 
 sub tk_hamming_weight {
     my $integer = shift;
@@ -1570,8 +1496,8 @@ sub tk_distance_sum_of_parents_n_children {
     my @f_list = @$ref_f_list;
     my $distance = 0;
     foreach my $f (@f_list) {
-        my $ref_e_coords = $hash_id_lookup_to_array{$e}{canvas};
-        my $ref_f_coords = $hash_id_lookup_to_array{$f}{canvas};
+        my $ref_e_coords = $array_lookup_id_to_hash{$e}{canvas};
+        my $ref_f_coords = $array_lookup_id_to_hash{$f}{canvas};
         $distance += &tk_distance($ref_e_coords, $ref_f_coords);
     }
     return $distance;
@@ -1586,10 +1512,10 @@ sub tk_distance {
 
 sub tk_swap {
     my ($n, $m) = @_;
-    ($hash_id_lookup_to_array{$m}{canvas},
-     $hash_id_lookup_to_array{$n}{canvas}) =
-    ($hash_id_lookup_to_array{$n}{canvas},
-     $hash_id_lookup_to_array{$m}{canvas});  
+    ($array_lookup_id_to_hash{$m}{canvas},
+     $array_lookup_id_to_hash{$n}{canvas}) =
+    ($array_lookup_id_to_hash{$n}{canvas},
+     $array_lookup_id_to_hash{$m}{canvas});  
 }
 
 ###
@@ -1598,15 +1524,11 @@ sub tk_swap {
 
 sub tk_hasse {
     ### i/p - \@array
-    ### o/p - \@array_with_coords
-    ###     - \%hash_id_lookup_to_array
+    ### o/p - %array_lookup_id_to_hash
+    ###     - @array_with_coords
 
-    @array_with_coords = ();
-    %hash_id_lookup_to_array = ();
     my $ref_array = shift;
     my @array = @$ref_array;
-    # print "array = @$ref_array.\n";
-    # &gui_print_hypercube(\@array);
     my ($x_origin, $y_origin, $x_interval, $y_interval) = &tk_scale_settings($ref_array);
 
     foreach my $h (0..$#array) {    # at height h
@@ -1626,19 +1548,19 @@ sub tk_hasse {
                 coords => [$xc, $yc, $zc],
                 canvas => [$x_screen, $y_screen, $z_screen],
             };
-            $hash_id_lookup_to_array{$id} = $array_with_coords[$h][$j];  # each element is a hash
+            $array_lookup_id_to_hash{$id} = $array_with_coords[$h][$j];
         }
 
-        #foreach my $h (0..$#array_with_coords) {    # at height h
-        #my @ee = @{$array_with_coords[$h]};
-        #    foreach my $j (0..$#ee) {
-        #        my $id = $array_with_coords[$h][$j]{id};
-        #        my $ref_coords = $array_with_coords[$h][$j]{coords};
-        #        my $ref_canvas = $array_with_coords[$h][$j]{canvas};
-        #    }
-        #}
+    foreach my $h (0..$#array_with_coords) {    # at height h
+        my @ee = @{$array_with_coords[$h]};
+            foreach my $j (0..$#ee) {
+                my $id = $array_with_coords[$h][$j]{id};
+                my $ref_coords = $array_with_coords[$h][$j]{coords};
+                my $ref_canvas = $array_with_coords[$h][$j]{canvas};
+            }
+        }
     }
-    return \@array_with_coords, \%hash_id_lookup_to_array;
+    return \%array_lookup_id_to_hash, \@array_with_coords;
 }
 
 sub tk_scale_settings {
@@ -1648,7 +1570,6 @@ sub tk_scale_settings {
     ###     - interval between heights
 
     my $ref_array = shift;
-    # print "array = @$ref_array\n";
     my @array = @$ref_array;                     my $max_height = $#array;
     my @elem  = @{$array[int $max_height/2]};    my $max_width  = $#elem;
     my $x_middle = $x_normal / 2;
@@ -1663,54 +1584,4 @@ sub tk_scale_settings {
     my $y_origin = $y_middle + $y_interval * $max_height / 2;
 
     return ($x_origin, $y_origin, $x_interval, $y_interval);
-}
-
-sub step_produce_assembly_has_parent {
-    ### i/p - @parent_child_pair  # taken from STEP file via cdsr-pds-nano-pd-pdfwss-p
-    ### o/p - %assembly           # custom assembly relationship, a parent points to a number of children
-    ###       key = parent, value = ref to children
-    ###     - %has_parent         # custom assembly relationship, a child points to its parent
-    ###       key = child, value = parent (could be null for a top level assembly)
-    my @parent_child_pair = @_;
-    %assembly = %has_parent = ();
-    foreach my $ref_of_one_pair (@parent_child_pair) {
-        my ($parent, $child) = @{$ref_of_one_pair};
-        $assembly{$parent} = [];
-        $assembly{$child}  = [];
-        $has_parent{$parent} = ();
-        $has_parent{$child}  = ();
-    }
-    foreach my $ref_of_one_pair (@parent_child_pair) {
-        my ($parent, $child) = @{$ref_of_one_pair};
-        push @{$assembly{$parent}}, $child;    # %assembly
-        $has_parent{$child} = $parent;         # %has_parent
-    }
-    return \%assembly, \%has_parent;
-}
-
-sub step_count_atomic_part {
-    ### i/p - %assembly
-    ### o/p - @atoms
-    my @atoms = ();
-    foreach my $parent (keys %assembly) {
-        my @children = @{$assembly{$parent}};
-        push @atoms, $parent unless @children;
-    }
-    return @atoms;
-}
-
-sub find_top_level_assembly {
-    my @parent_child_pair = @_;
-    my %children = ();
-    foreach my $ref (@parent_child_pair) {
-        my ($p, $c) = @$ref;
-        #print "@$p, @$c\n";
-        $children{$c} = 1;
-    }
-    #print "\n";
-    foreach my $ref (@parent_child_pair) {
-        my ($p, $c) = @$ref;
-        return $p unless $children{$p};
-    }
-
 }

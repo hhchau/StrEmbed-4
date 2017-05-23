@@ -1,6 +1,6 @@
 package Tk::FileSelect;
 
-# HHC - 2017-03-24 - less buttons Open/Cancel or Save/Cancel
+# HHC - 2017-03-24
 
 use vars qw($VERSION @EXPORT_OK);
 $VERSION = '4.018'; # was: sprintf '4.%03d', q$Revision: #15 $ =~ /\D(\d+)\s*$/;

@@ -1,7 +1,7 @@
 README.TXT
-22 May 2016
+10 December 2016
 
-#    StrEmbed-4 - Embedding assembly structure on to a corresponding hypercube lattice
+#    StrEmbed-3 - Embedding assembly structure on to a corresponding hypercube lattice
 #    Copyright (C) 2016  University of Leeds
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@ README.TXT
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Please read "./doc/StrEmbed-4 Users' Manual.pdf" for instructions on
-using StrEmbed-4.  Thanks for your interest.
+Please read "./doc/StrEmbed-3 Users' Manual.pdf" for instructions on
+using StrEmbed-3.  Thanks for your interest.
 
 Hau Hing Chau
 H.H.Chau@leeds.ac.uk

@@ -29,15 +29,17 @@ use strict;
 my $n;
 my $nauo_n;
 my %line;
-# my @shape_def_rep = ();
+my @shape_def_rep = ();
 my %shape_def_rep;
 my %to_be_deleted_shape_def_rep;
 my @shape_rep_relationship = ();
-# my @context_dependent_shape_rep = ();
+my @context_dependent_shape_rep = ();
 my %context_dependent_shape_rep;
 my $preamble;
 my %part;
 my @parent_child_pair;  # taken from STEP file via cdsr-pds-nano-pd-pdfwss-p
+my %assembly;           # custom assembly relationship, a parent points to a number of children
+my %has_parent;         # custom assembly relationship, a child points to its parent
 
 return 1;
 
@@ -46,23 +48,9 @@ return 1;
 ###
 
 sub step_initialise {
-    $n = "";
-    $nauo_n = "";
-    %line = ();
-    # @shape_def_rep = ();
-    %shape_def_rep = ();
-    %to_be_deleted_shape_def_rep = ();
-    @shape_rep_relationship = ();
-    # @context_dependent_shape_rep = ();
-    %context_dependent_shape_rep = ();
-    $preamble = ();
-    %part = ();
-    @parent_child_pair = ();  # taken from STEP file via cdsr-pds-nano-pd-pdfwss-p
 }
 
 sub step_parent_child_pair {
-    # print "step_parent_child_pair\n";
-    # &print_pairs(@parent_child_pair);
     return \@parent_child_pair;
 }
 
@@ -113,6 +101,55 @@ sub step_produce_parent_child_pairs {
     return @parent_child_pair;
 }
 
+sub step_produce_assembly_has_parent {
+    ### i/p - @parent_child_pair  # taken from STEP file via cdsr-pds-nano-pd-pdfwss-p
+    ### o/p - %assembly           # custom assembly relationship, a parent points to a number of children
+    ###       key = parent, value = ref to children
+    ###     - %has_parent         # custom assembly relationship, a child points to its parent
+    ###       key = child, value = parent (could be null for a top level assembly)
+    my @parent_child_pair = @_;
+    foreach my $ref_of_one_pair (@parent_child_pair) {
+        my ($parent, $child) = @{$ref_of_one_pair};
+        $assembly{$parent} = [];
+        $assembly{$child}  = [];
+        $has_parent{$parent} = ();
+        $has_parent{$child}  = ();
+    }
+    foreach my $ref_of_one_pair (@parent_child_pair) {
+        my ($parent, $child) = @{$ref_of_one_pair};
+        push @{$assembly{$parent}}, $child;    # %assembly
+        $has_parent{$child} = $parent;         # %has_parent
+    }
+    return \%assembly, \%has_parent;
+}
+
+sub step_count_atomic_part {
+    ### i/p - %assembly
+    ### o/p - @atoms
+    my @atoms = ();
+    foreach my $parent (keys %assembly) {
+        my @children = @{$assembly{$parent}};
+        push @atoms, $parent unless @children;
+    }
+    return @atoms;
+}
+
+sub step_top_level_assembly {
+    while (my ($child, $parent) = each %has_parent) {
+        return $child unless $parent;
+    }
+}
+
+sub is_covered_by {
+    my $child = shift;
+    return $has_parent{$child};
+}
+
+sub covers {
+    my $parent = shift;
+    return @{$assembly{$parent}}
+}
+
 sub get_product_label {
     ### i/p - id_product_definition
     ### o/p - label_product
@@ -128,6 +165,7 @@ sub get_product_label {
 ###
 
 sub step_open {
+    # print "opening STEP file\n";
     my $file = shift;
     &read_step_file($file);
     &find_product;
@@ -140,6 +178,7 @@ sub step_delete_old {
     &find_to_be_deleted_shape_def_rep;
     &find_old_pds;
     &delete_entities;
+    # print "delete entities ...\n";
 }
 
 sub read_step_file {
@@ -437,7 +476,7 @@ sub step_find_sdr_cdsr {
 sub find_to_be_deleted_shape_def_rep {
     ### put pds/sr of sdr into @to_be_deleted_shape_def_rep [and their branches] recursively
     foreach my $sdr (keys %to_be_deleted_shape_def_rep) {
-        my @references = $line{$sdr} =~ m/\#\d+/g;    # (field[0], field[1]) = (pds, sr) ### Use of uninitialized value within %line in pattern match (m//) at StrEmbed/StrEmbed_4_step.pm line 479, <DATA> line 21.
+        my @references = $line{$sdr} =~ m/\#\d+/g;    # (field[0], field[1]) = (pds, sr)
         foreach my $ref (@references) {
             &find_to_be_deleted_entities($sdr, $ref);
         }
