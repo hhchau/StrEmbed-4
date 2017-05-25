@@ -144,7 +144,7 @@ sub tk_mainloop {
     $mw -> idletasks;    # this line is crucial, or is it ???
     
     &tk_pulldown_menu;
-    &tk_lower_frame;
+    # &tk_lower_frame;
     &tk_assembly_tree;
     &tk_canvas;
     # my $height = $mw -> screenheight;
@@ -173,16 +173,16 @@ sub tk_pulldown_menu {
         -side => 'left',
     );
 
-    my $menu_51 = $pm -> Menubutton( -text => "Background 2^n lattice",
+    my $menu_51 = $pm -> Menubutton( -text => "Background display",
         -menuitems => [
-            [ 'command' => "O~ff", -command => sub { &tk_turn_off_is_covered_by } ],
             [ 'command' => "O~n",  -command => sub { &tk_turn_on_is_covered_by } ],
+            [ 'command' => "O~ff", -command => sub { &tk_turn_off_is_covered_by } ],
         ]
     ) -> pack(
         -anchor => 'nw',
         -side => 'left',
     );
-
+=ccc
     my $menu_52 = $pm -> Menubutton( -text => "Plot",
         -state => 'normal',
         -menuitems => [
@@ -238,7 +238,7 @@ sub tk_pulldown_menu {
         -anchor => 'nw',
         -side => 'left',
     );
-
+=cut
     my $menu_90 = $pm -> Menubutton( -text => "Help",
         -state => 'normal',
         -menuitems => [
@@ -787,7 +787,7 @@ sub tk_optimise {
             };
         }
         $percentage = sprintf "%.2f", (int $counter/$number_of_times * 10000) / 100;
-        $status -> update;
+        # $status -> update;
         $iterations++;
         $zeros++;
         $zeros = 0 if $counter;
@@ -830,6 +830,7 @@ sub tk_embed_height_n {
 
     ### consider 2^n hypercube when height = n
     my $top_level_assembly = &find_top_level_assembly(@parent_child_pair);
+    $new_assy_name = $top_level_assembly;
     # print "... top level = $top_level_assembly\n";
     # print "atoms = @atoms\n";   # global var NG, need to generate on the fly - 19/5/17
 
@@ -996,7 +997,7 @@ sub tk_plot_elements {
                     -text => $array_with_coords[$h][$j]{label},
                     -tags => "element_label",
                     -fill => 'black',
-                    -font => 'Helvetica 20',
+                    -font => 'Helvetica 10',
                 );
             }
         }
@@ -1054,7 +1055,8 @@ sub file_save {
         # print "file_save ... @list\n";
         &create_new_shape_def_rep(@list);
     }
-    my $file = $new_assy_name . ".STEP" if $new_assy_name;
+
+    my $file = $new_assy_name . "_modified" . ".STEP" if $new_assy_name;
 
     my $fs = $mw -> FileSelect(
         -initialdir => "../step_data/output",
@@ -1136,31 +1138,37 @@ sub click_entry {
     our $current;
     our $popup = new MainWindow;
     $popup -> optionAdd('*font', 'Helvetica 10');
-    $popup -> title("Move tree to");
+    $popup -> title("Change assembly structure");
     my $icon = $popup -> Photo(-file => "./resources/icons/32x32/Actions-document-edit-icon-40.gif");
     $popup -> iconimage($icon);
     $popup -> bind('<Leave>' => [ sub {$popup -> destroy if $popup eq $Tk::widget} ]);
 
+    my $labela = $popup -> Label(-text=>"First item selected:",
+                                 -font => 'bold' ) -> pack;
     my $name1 = $popup -> Entry(-textvariable => \$entry) -> pack;
+    my $labelb = $popup -> Label(-text=>"Second item selected:",
+                                 -font => 'bold' ) -> pack;
     my $name2 = $popup -> Entry(-textvariable => \$target) -> pack;
+    my $labelc = $popup -> Label(-text=>"Commands ",
+                                 -font => 'bold' ) -> pack;
     my $button1 = $popup -> Button(
-        -text => "insert before",
+        -text => "Insert before",
         -command => [\&capture, "insert_before"],
     ) -> pack;
     my $button2 = $popup -> Button(
-        -text => "insert after",
+        -text => "Insert after",
         -command => [\&capture, "insert_after"],
     ) -> pack;
     my $button3 = $popup -> Button(
-        -text => "adopt",
+        -text => "Adopt",
         -command => [\&capture, "adopt" ],
     ) -> pack;
     my $button4 = $popup -> Button(
-        -text => "assy",
+        -text => "Assemble",
         -command => [\&capture, "assy" ],
     ) -> pack;
     my $button5 = $popup -> Button(
-        -text => "collapse",
+        -text => "Collapse",
         -command => [\&capture, "collapse" ],
     ) -> pack;
     my $button6 = $popup -> Button(
@@ -1309,7 +1317,7 @@ sub tk_assembly_tree {
     $tree -> bind('<Button-2>' => [\&tk_callback_B2, 'qwerty' ]);
     $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
     # $tree -> bind('<MouseWheel>' => [\&print_mousewheel]);
-
+=ccc
     $f_tree -> Entry(
         -text => "Entry under cursor",
         -state => 'disable',
@@ -1411,6 +1419,7 @@ sub tk_assembly_tree {
     my $b4  = $balloons -> attach($button4,  -balloonmsg => "Scroll to Bottom", -statusmsg => "Status bar message");
     my $b2  = $balloons -> attach($button2,  -balloonmsg => "Move Level Up", -statusmsg => "Status bar message");
     my $b3  = $balloons -> attach($button3,  -balloonmsg => "Move Level Down", -statusmsg => "Status bar message");
+=cut
 }
 
 ### button callbacks
