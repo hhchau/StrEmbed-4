@@ -34,7 +34,7 @@ use strict;
 use Tk;
 use Tk::Balloon;
 use Tk::Tree;
-use Tk::PNG;
+# use Tk::PNG;
 use StrEmbed::FileSelect;
 
 our @assy_tree;
@@ -413,12 +413,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Copyright acknowledgements
-
-Additional icons are obtatined from:
-1/ Icon Archive <http://www.iconarchive.com/>
-2/ Visual Phram <http://www.visualpharm.com/articles/icon_sizes.html>
 ";
 
     my $popup_copyright = new MainWindow;
@@ -1056,7 +1050,7 @@ sub file_save {
         &create_new_shape_def_rep(@list);
     }
 
-    my $file = $new_assy_name . "_modified" . ".STEP" if $new_assy_name;
+    my $file = $new_assy_name . "_modified" . ".STEP";
 
     my $fs = $mw -> FileSelect(
         -initialdir => "../step_data/output",

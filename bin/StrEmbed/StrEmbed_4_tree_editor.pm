@@ -31,6 +31,17 @@ my $n = 0;
 
 return 1;
 
+sub biggest_current_n {
+    my @assy_tree = @_;
+    my %hash = ();
+    foreach my $ref (@assy_tree) {
+        my $this = $$ref[-1];
+        $this =~ m/(ASSY_)(\d+)/;
+        $n = $2 if defined $1 and defined $2 and $1 eq "ASSY_" and $n < $2;
+    }
+    return $n;
+}
+
 sub change_tree {
     ### i/p - \@assy_tree, $command, $from, $to
     ### o/p - @assy_tree
@@ -102,6 +113,7 @@ sub change_tree {
         my @first_tree = ();
         my @second_tree = ();
         my @rest = ();
+        $n = &biggest_current_n(@assy_tree);
         my $new = "ASSY_" . ++$n;
         ### first pass
         foreach my $ref (@assy_tree) {
