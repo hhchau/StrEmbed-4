@@ -21,6 +21,7 @@
 # HHC - 2017-01-09 - post Release A
 # HHC - 2017-03-07 - starting StrEmbed-4
 # HHC - 2017-03-12 - insert before and insert after work correctly
+# HHC - 2017-05-26 Version 4 Release C
 
 require 5.002;
 use warnings;

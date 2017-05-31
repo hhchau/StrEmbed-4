@@ -27,6 +27,8 @@
 # HHC - 2017-03-12 - insert before and insert after work correctly
 # HHC - 2017-05-12 - trying to populated @assy_tree (a HTree backwards)
 # HHC - 2017-05-19 - sorted out replot hasse diagram after HTree changes
+# HHC - 2017-05-26 - clean up unused files and old versions
+# HHC - 2017-05-26 Version 4 Release C
 
 require 5.002;
 use warnings;
@@ -155,13 +157,13 @@ sub tk_mainloop {
 
 sub tk_pulldown_menu {
     # menu bar
-    my $pm = $mw -> Frame -> pack(
+    our $pm = $mw -> Frame -> pack(
         -side => 'top',
         -anchor => 'w',
         -fill => 'x',
     );
 
-    my $menu_01 = $pm -> Menubutton( -text => "File",
+    $menu_01 = $pm -> Menubutton( -text => "File",
         -menuitems => [
             [ 'command' => "Open",  -command => sub { &file_open } ],
             [ 'command' => "Save",  -command => sub { &file_save } ],
@@ -182,6 +184,7 @@ sub tk_pulldown_menu {
         -anchor => 'nw',
         -side => 'left',
     );
+    
 =ccc
     my $menu_52 = $pm -> Menubutton( -text => "Plot",
         -state => 'normal',
