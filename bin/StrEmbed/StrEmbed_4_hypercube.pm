@@ -22,6 +22,7 @@
 # HHC - 2017-03-07 - starting StrEmbed-4
 # HHC - 2017-03-24
 # HHC - 2017-05-26 Version 4 Release C
+# HHC - 2017-06-01 - fixed another open file
 
 require 5.002;
 # use warnings qw(FATAL);
@@ -41,11 +42,11 @@ return 1;
 ###
 
 sub hypercube_initialise {
-    # $max = "";
-    # $i = "";
-    # %hypercube = ();
-    # %elements_at_height = ();
-    # @array = ();
+    $max = "";
+    $i = "";
+    %hypercube = ();
+    %elements_at_height = ();
+    @array = ();
 }
 
 sub hypercube_return_chain {
