@@ -30,7 +30,6 @@
 # HHC - 2017-05-26 - clean up unused files and old versions
 # HHC - 2017-05-26 Version 4 Release C
 # HHC - 2017-05-31 - beyond final project meeting on 5th and 6th June 2017
-# HHC - 2017-06-02 - need to fix hypercube_initialise vs open a new file vs structure editor
 
 require 5.12.0;  # needed for smart match
 use warnings;
@@ -263,6 +262,7 @@ sub tk_pulldown_menu {
 }
 
 sub replot_hasse {
+    &hypercube_initialise;
     my @parent_child_pair = &htree_to_pairs(@assy_tree);  # was in &file_open
 
     # in the place of &big_bundle
@@ -1746,8 +1746,8 @@ sub tk_scale_settings {
 
     my $ref_array = shift;
     my @array = @$ref_array;                     my $max_height = $#array;
-    # print "tk+scale $ref_array\n";
-    # print "tk_scale @$_\n" foreach @array;
+    print "tk+scale $ref_array\n";
+    print "tk_scale @$_\n" foreach @array;
     my @elem  = @{$array[int $max_height/2]};    my $max_width  = $#elem;
     my $x_middle = $x_normal / 2;
     my $y_middle = $y_normal / 2;

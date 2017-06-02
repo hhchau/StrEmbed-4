@@ -30,9 +30,8 @@
 # HHC - 2017-05-26 - clean up unused files and old versions
 # HHC - 2017-05-26 Version 4 Release C
 # HHC - 2017-05-31 - beyond final project meeting on 5th and 6th June 2017
-# HHC - 2017-06-02 - need to fix hypercube_initialise vs open a new file vs structure editor
 
-require 5.12.0;  # needed for smart match
+require 5.002;
 use warnings;
 use strict;
 use Tk;
@@ -263,6 +262,7 @@ sub tk_pulldown_menu {
 }
 
 sub replot_hasse {
+    &hypercube_initialise;
     my @parent_child_pair = &htree_to_pairs(@assy_tree);  # was in &file_open
 
     # in the place of &big_bundle
@@ -668,7 +668,7 @@ sub assembly_has_parent_to_Htree {
 sub file_open {
     &step_initialise;
     &hypercube_initialise;
-    # &tk_initialise;    # would this be okay? - open file then cancel
+    &tk_initialise;
     my $fs = $mw -> FileSelect(
         -initialdir => "../step_data/input",
         -filter => "*.STEP",
@@ -1258,20 +1258,9 @@ sub tk_callback_tree{
 
     my $heading = $popup -> Label(-text=>"Available options:",
                                   -font => 'bold' ) -> pack;
-    # $popup -> Label(-text=> $_) -> pack foreach @selection;
+    $popup -> Label(-text=> $_) -> pack foreach @selection;
     my @options = &tk_tree_check_options(@selection);
-    $popup -> Label(-text => $_) -> pack foreach @options;
-    #print "number of options = @options\n";
-}
-
-sub an_element_of ($$) {
-    my $this = shift;
-    my $ref = shift;
-    my @list = @{$ref};
-    foreach (@list) {
-        return 1 if $_ eq $this;
-    }
-    return 0;
+    print "number of options = @options\n";
 }
 
 sub tk_tree_check_options {
@@ -1292,22 +1281,8 @@ sub tk_tree_check_options {
     # print "sub_assy = @sub_assy\n";
     # print "atoms = @atoms\n";
     
-    if ( $#selection == -1 ) { return "None" }
-
-    if ( $#selection ==  0 ) {
-        my @list = split '\.', $selection[0];
-        my $this = pop @list;
-        # print "... $this\n";
-        no warnings;  # surpress "Smartmatch is experimental" warning
-        if ($this eq $top_assy) {
-           return "top level", $this;
-        } elsif ( $this ~~ @sub_assy ) {
-            return "sub_assy", $this;
-        } elsif ( $this ~~ @atoms ) {
-            return "atom", $this;
-        }
-        use warnings;  # resume warnings
-    } else { return @selection}
+    if ( $#selection == -1 ) { return () }
+    if ( $#selection ==  0 ) { return @selection }
 }
 
 sub tk_tree_check_atoms_etc {
@@ -1746,8 +1721,6 @@ sub tk_scale_settings {
 
     my $ref_array = shift;
     my @array = @$ref_array;                     my $max_height = $#array;
-    # print "tk+scale $ref_array\n";
-    # print "tk_scale @$_\n" foreach @array;
     my @elem  = @{$array[int $max_height/2]};    my $max_width  = $#elem;
     my $x_middle = $x_normal / 2;
     my $y_middle = $y_normal / 2;
