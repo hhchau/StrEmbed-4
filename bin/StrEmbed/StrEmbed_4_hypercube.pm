@@ -23,7 +23,11 @@
 # HHC - 2017-03-24
 # HHC - 2017-05-26 Version 4 Release C
 # HHC - 2017-06-01 - fixed another open file hypercube_initialise vs editor
-# HHC - 2017-06-02 - need to fix 
+# HHC - 2017-06-02 - need to fix
+# HHC - 2017-06-02 - bug fixed for hypercube_initialise
+#                    shouldn't do it for replot, only for re-open another file
+#                    otherwise causing editor to fail and Windows to hang
+# HHC - 2017-06-04 Version 4 Release D
 
 require 5.002;
 # use warnings qw(FATAL);

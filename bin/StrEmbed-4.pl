@@ -21,6 +21,7 @@
 # HHC - 2017-03-07
 # HHC - 2017-03-24
 # HHC - 2017-05-26 Version 4 Release C
+# HHC - 2017-06-04 Version 4 Release D
 
 require 5.002;
 use warnings;

@@ -22,6 +22,7 @@
 # HHC - 2017-03-07 - starting StrEmbed-4
 # HHC - 2017-03-12 - insert before and insert after work correctly
 # HHC - 2017-05-26 Version 4 Release C
+# HHC - 2017-06-04 Version 4 Release D
 
 require 5.002;
 use warnings;
@@ -31,6 +32,10 @@ our @assy_tree;
 my $n = 0;
 
 return 1;
+
+sub tree_editor_initialise {
+    $n = 0;
+}
 
 sub biggest_current_n {
     my @assy_tree = @_;
@@ -230,3 +235,69 @@ sub compare_array {
     }
     return 1;
 }
+
+### subroutines for new editor using one click on third mouse button
+
+sub tree_check_options {
+    # i/p = @assy_tree    # delimiter is "space"
+    # i/p = @selection    # delimiter is "full stop"
+    my @selection = @_;
+    # print "*** selection ***\n";
+    # print "$_\n" foreach @selection;
+    # print "\n";
+
+    # print "\@assy_tree\n";
+    # print "  @$_\n" foreach @assy_tree;
+    # print "\n";
+    my ($top_assy, $ref_sub_assy, $ref_atoms) = &tk_tree_check_atoms_etc(@assy_tree);
+    my @sub_assy = @{$ref_sub_assy};
+    my @atoms = @{$ref_atoms};
+    # print "top = $top_assy\n";
+    # print "sub_assy = @sub_assy\n";
+    # print "atoms = @atoms\n";
+    
+    if ( $#selection == -1 ) { return "None" }
+
+    if ( $#selection ==  0 ) {
+        my @list = split '\.', $selection[0];
+        my $this = pop @list;
+        # print "... $this\n";
+        no warnings;  # surpress "Smartmatch is experimental" warning
+        if ($this eq $top_assy) {
+           return "top_assy", $this;
+        } elsif ( $this ~~ @sub_assy ) {
+            return "sub_assy", $this;
+        } elsif ( $this ~~ @atoms ) {
+            return "atom", $this;
+        }
+        use warnings;  # resume warnings
+    } else { return "more", @selection}
+}
+
+sub rename_atom {
+    our $popup;
+    our ($button_R, $button_S, $button_T, $button_U);
+    our $from;
+    our $name;
+    $name = $from = shift;
+    $button_R -> configure(-state => 'disabled');
+    $button_S -> configure(-state => 'disabled');
+    $button_T -> configure(-state => 'disabled');
+    $button_U -> configure(-state => 'disabled');
+    $popup -> Label(-text => "\nEnter new name") -> pack;
+    $popup -> Entry(-textvariable => \$name) -> pack;
+    $popup -> Button(-text => "Rename", -command => sub {print "atom rename $from to $name\n"} ) -> pack
+}
+
+sub rename_sub_assy {
+    our $popup;
+    our ($button_R, $button_S, $button_T, $button_U);
+    our $from;
+    our $name;
+    $name = $from = shift;
+    $button_U -> configure(-state => 'disabled');
+    $popup -> Label(-text => "\nEnter new name") -> pack;
+    $popup -> Entry(-textvariable => \$name) -> pack;
+    $popup -> Button(-text => "Rename", -command => sub {print "atom rename $from to $name\n"} ) -> pack
+}
+

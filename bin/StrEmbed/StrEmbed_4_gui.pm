@@ -31,6 +31,10 @@
 # HHC - 2017-05-26 Version 4 Release C
 # HHC - 2017-05-31 - beyond final project meeting on 5th and 6th June 2017
 # HHC - 2017-06-02 - need to fix hypercube_initialise vs open a new file vs structure editor
+# HHC - 2017-06-02 - bug fixed for hypercube_initialise
+#                    shouldn't do it for replot, only for re-open another file
+#                    otherwise causing editor to fail and Windows to hang
+# HHC - 2017-06-04 Version 4 Release D
 
 require 5.12.0;  # needed for smart match
 use warnings;
@@ -668,6 +672,7 @@ sub assembly_has_parent_to_Htree {
 sub file_open {
     &step_initialise;
     &hypercube_initialise;
+    &tree_editor_initialise;
     # &tk_initialise;    # would this be okay? - open file then cancel
     my $fs = $mw -> FileSelect(
         -initialdir => "../step_data/input",
@@ -1243,12 +1248,9 @@ sub tk_callback_B2 {
 sub tk_callback_tree{
     my @list = @_;
     my @selection = $tree -> info("selection");
-    # print "B3 tk_callback_tree - @list\n";
-    # print "*** selection ***\n";
-    # print "$_\n" foreach @selection;
-    # print "\n";
 
-    our $popup = new MainWindow;
+    our $popup;
+    $popup = new MainWindow;
     $popup -> optionAdd('*font', 'Helvetica 10');
     $popup -> title("Change assembly structure");
     my $icon = $popup -> Photo(-file => "./resources/icons/32x32/Actions-document-edit-icon-40.gif");
@@ -1256,13 +1258,46 @@ sub tk_callback_tree{
     # $popup -> overrideredirect(1);
     $popup -> bind('<Leave>' => [ sub {$popup -> destroy if $popup eq $Tk::widget} ]);
 
-    my $heading = $popup -> Label(-text=>"Available options:",
-                                  -font => 'bold' ) -> pack;
-    # $popup -> Label(-text=> $_) -> pack foreach @selection;
-    my @options = &tk_tree_check_options(@selection);
-    $popup -> Label(-text => $_) -> pack foreach @options;
-    #print "number of options = @options\n";
+    # housekeeping
+    my $heading = $popup -> Label(-text=>"Change tree structure", -font => 'bold' ) -> pack;
+    $popup -> Button(-text => "Cancel", -command => [ sub {$popup -> destroy} ] ) -> pack(-side => 'bottom');
+    $popup -> Label(-text => "") -> pack(-side => 'bottom');
+    my @options = &tree_check_options(@selection);
+    my $option = shift @options;
+    if (@options) {
+        $popup -> Label(-text => "\nSelected part(s)") -> pack;
+        $popup -> Entry(-text => $_, -state => 'readonly') -> pack foreach @options;
+    } else {
+        $popup -> Label(-text => "\nNo part selected") -> pack;
+    }
+
+    our ($button_R, $button_S, $button_T, $button_U);
+    our $from;
+    our $name;
+
+    # the meat
+    if ($option eq "atom") {
+        $popup -> Label(-text => "\nOption(s) available") -> pack;
+        $button_R = $popup -> Button(-text => "Move up", -command => sub {print "move up\n"} ) -> pack;
+        $button_S = $popup -> Button(-text => "Move down", -command => sub {print "move down\n"} ) -> pack;
+        $button_T = $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
+        $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_atom, $options[0] ] ) -> pack;
+    } elsif ($option eq "sub_assy") {
+        $popup -> Label(-text => "\nOption(s) available") -> pack;
+        $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
+        $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_sub_assy, $options[0] ] ) -> pack;
+    } elsif ($option eq "top_assy") {
+        $popup -> Label(-text => "\nTop level assembly selected\nNo option available") -> pack;
+    }
+    
+    
 }
+
+
+
+
+
+
 
 sub an_element_of ($$) {
     my $this = shift;
@@ -1274,40 +1309,7 @@ sub an_element_of ($$) {
     return 0;
 }
 
-sub tk_tree_check_options {
-    # i/p = @assy_tree    # delimiter is "space"
-    # i/p = @selection    # delimiter is "full stop"
-    my @selection = @_;
-    # print "*** selection ***\n";
-    # print "$_\n" foreach @selection;
-    # print "\n";
-
-    # print "\@assy_tree\n";
-    # print "  @$_\n" foreach @assy_tree;
-    # print "\n";
-    my ($top_assy, $ref_sub_assy, $ref_atoms) = &tk_tree_check_atoms_etc(@assy_tree);
-    my @sub_assy = @{$ref_sub_assy};
-    my @atoms = @{$ref_atoms};
-    # print "top = $top_assy\n";
-    # print "sub_assy = @sub_assy\n";
-    # print "atoms = @atoms\n";
-    
-    if ( $#selection == -1 ) { return "None" }
-
-    if ( $#selection ==  0 ) {
-        my @list = split '\.', $selection[0];
-        my $this = pop @list;
-        # print "... $this\n";
-        no warnings;  # surpress "Smartmatch is experimental" warning
-        if ($this eq $top_assy) {
-           return "top level", $this;
-        } elsif ( $this ~~ @sub_assy ) {
-            return "sub_assy", $this;
-        } elsif ( $this ~~ @atoms ) {
-            return "atom", $this;
-        }
-        use warnings;  # resume warnings
-    } else { return @selection}
+sub tk_tree_same_parent {
 }
 
 sub tk_tree_check_atoms_etc {
@@ -1397,14 +1399,14 @@ sub tk_assembly_tree {
         -expand => 1,
     );
 
-    $tree -> bind('<ButtonPress-1>'           => [\&tk_callback_B1, "Button",         "Press"]);
-    $tree -> bind('<ButtonRelease-1>'         => [\&tk_callback_B1, "Button",         "Release"]);
-    $tree -> bind('<Control-ButtonPress-1>'   => [\&tk_callback_B1, "Control-Button", "Press"]);
-    $tree -> bind('<Control-ButtonRelease-1>' => [\&tk_callback_B1, "Control-Button", "Release"]);
-    $tree -> bind('<Shift-ButtonPress-1>'     => [\&tk_callback_B1, "Shift-Button",   "Press"]);
-    $tree -> bind('<Shift-ButtonRelease-1>'   => [\&tk_callback_B1, "Shift-Button",   "Release"]);
-    $tree -> bind('<Button-2>' => [\&tk_callback_B2, 'qwerty' ]);
-    $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
+    # $tree -> bind('<ButtonPress-1>'           => [\&tk_callback_B1, "Button",         "Press"]);
+    # $tree -> bind('<ButtonRelease-1>'         => [\&tk_callback_B1, "Button",         "Release"]);
+    # $tree -> bind('<Control-ButtonPress-1>'   => [\&tk_callback_B1, "Control-Button", "Press"]);
+    # $tree -> bind('<Control-ButtonRelease-1>' => [\&tk_callback_B1, "Control-Button", "Release"]);
+    # $tree -> bind('<Shift-ButtonPress-1>'     => [\&tk_callback_B1, "Shift-Button",   "Press"]);
+    # $tree -> bind('<Shift-ButtonRelease-1>'   => [\&tk_callback_B1, "Shift-Button",   "Release"]);
+    # $tree -> bind('<Button-2>' => [\&tk_callback_B2, 'qwerty' ]);
+    # $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
     # $tree -> bind('<MouseWheel>' => [\&print_mousewheel]);
 =ccc
     $f_tree -> Entry(
@@ -1746,8 +1748,6 @@ sub tk_scale_settings {
 
     my $ref_array = shift;
     my @array = @$ref_array;                     my $max_height = $#array;
-    # print "tk+scale $ref_array\n";
-    # print "tk_scale @$_\n" foreach @array;
     my @elem  = @{$array[int $max_height/2]};    my $max_width  = $#elem;
     my $x_middle = $x_normal / 2;
     my $y_middle = $y_normal / 2;
