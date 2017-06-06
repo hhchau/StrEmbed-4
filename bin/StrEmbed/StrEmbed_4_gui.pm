@@ -48,7 +48,8 @@ use StrEmbed::FileSelect;
 our @assy_tree;
 
 my $max;    # hypercube size
-my ($x_normal, $y_normal) = (1440, 720);    # 1920 x 1080
+my ($x_normal, $y_normal) = (880, 720);    # fits 1280 x 1024 screen
+# my ($x_normal, $y_normal) = (1440, 720);    # fits 1920 x 1080 screen
 my ($x_min, $y_min) = (640, 480);
 my $element_radius = 8;
 my $activewidth_is_covered_by = 5;
@@ -1246,7 +1247,7 @@ sub tk_callback_B2 {
 }
 
 sub tk_callback_tree{
-    my @list = @_;
+    # my @list = @_;
     my @selection = $tree -> info("selection");
 
     our $popup;
@@ -1406,7 +1407,7 @@ sub tk_assembly_tree {
     # $tree -> bind('<Shift-ButtonPress-1>'     => [\&tk_callback_B1, "Shift-Button",   "Press"]);
     # $tree -> bind('<Shift-ButtonRelease-1>'   => [\&tk_callback_B1, "Shift-Button",   "Release"]);
     # $tree -> bind('<Button-2>' => [\&tk_callback_B2, 'qwerty' ]);
-    # $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
+    $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
     # $tree -> bind('<MouseWheel>' => [\&print_mousewheel]);
 =ccc
     $f_tree -> Entry(
