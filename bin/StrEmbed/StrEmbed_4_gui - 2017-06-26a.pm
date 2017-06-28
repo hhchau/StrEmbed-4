@@ -1249,15 +1249,7 @@ sub tk_callback_tree{
     } elsif ($option eq "sub_assy") {
         $popup -> Label(-text => "\nOption(s) available") -> pack;
         $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
-        $button_U = $popup -> Button(
-            -text => "Rename",
-            -command => sub {
-                @assy_tree = &rename_sub_assy($options[0], $options[1]);
-                print "X too early\n";
-                print "X @$_\n" foreach @assy_tree;
-                # $popup -> destroy;   XXXXXX problem!!!  HHC 2017-06-26 14:30
-            }
-        ) -> pack;
+        $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_sub_assy, $options[0], $options[1] ] ) -> pack;
     } elsif ($option eq "top_assy") {
         $popup -> Label(-text => "\nTop level assembly selected\nNo option available") -> pack;
     }

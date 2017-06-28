@@ -1253,8 +1253,6 @@ sub tk_callback_tree{
             -text => "Rename",
             -command => sub {
                 @assy_tree = &rename_sub_assy($options[0], $options[1]);
-                print "X too early\n";
-                print "X @$_\n" foreach @assy_tree;
                 # $popup -> destroy;   XXXXXX problem!!!  HHC 2017-06-26 14:30
             }
         ) -> pack;

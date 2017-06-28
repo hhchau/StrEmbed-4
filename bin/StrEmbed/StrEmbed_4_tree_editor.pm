@@ -23,6 +23,8 @@
 # HHC - 2017-03-12 - insert before and insert after work correctly
 # HHC - 2017-05-26 Version 4 Release C
 # HHC - 2017-06-04 Version 4 Release D
+# HHC - 2017-06-15 - Have a go on new tree editor
+# HHC - 2017-06-26 - passing -textvariable => \$name to &change_tree from &rename_sub_assy now works
 
 require 5.002;
 use warnings;
@@ -69,6 +71,7 @@ sub change_tree {
     my @second_path = @pre_to;
 
     if ($command eq "insert_before" and &compare_array(\@first_path, \@second_path) ) {
+        # print "in the mood of insert before ($from) -> ($to)\n";
         foreach my $ref_this (@assy_tree) {
             my @this = @{$ref_this};
             if ( &compare_array(\@this, \@first) ) {
@@ -168,6 +171,29 @@ sub change_tree {
             }
             $assy_tree_changed = 1;
         }
+    } elsif ($command eq "rename") {
+        # print "in the mood of renaming (xx $from) -> (xx $to)\n";
+        my @from = split /\./, $from;
+        my @to   = split /\./, $to;
+        # print "--> $name_from\n";
+        # print "==> $name_to\n";
+        foreach my $ref (@assy_tree) {
+            my @this = @$ref;
+            my @temp = ();
+            foreach my $item (@this) {
+                if ($item eq $name_from) {
+                    push @temp, $name_to;
+                    $assy_tree_changed = 1;
+                } else {
+                    push @temp, $item;
+                }
+            }
+            push @temp_tree, \@temp;
+        }
+        # trying 2017-06-26
+        &delete_tree;
+        &insert_tree_items(@temp_tree);
+        &replot_hasse;
     } else {
         # do nothing
     }
@@ -237,6 +263,7 @@ sub compare_array {
 }
 
 ### subroutines for new editor using one click on third mouse button
+### June 2017
 
 sub tree_check_options {
     # i/p = @assy_tree    # delimiter is "space"
@@ -256,22 +283,48 @@ sub tree_check_options {
     # print "sub_assy = @sub_assy\n";
     # print "atoms = @atoms\n";
     
-    if ( $#selection == -1 ) { return "None" }
+    if ( $#selection == -1 ) { return "None" }    # no part selected
 
-    if ( $#selection ==  0 ) {
+    if ( $#selection ==  0 ) {    # one part selected
         my @list = split '\.', $selection[0];
         my $this = pop @list;
+        my $prefix = CORE::join '.', @list if @list;
         # print "... $this\n";
         no warnings;  # surpress "Smartmatch is experimental" warning
         if ($this eq $top_assy) {
            return "top_assy", $this;
         } elsif ( $this ~~ @sub_assy ) {
-            return "sub_assy", $this;
+            return "sub_assy", $this, $prefix;
         } elsif ( $this ~~ @atoms ) {
-            return "atom", $this;
+            return "atom", $this, $prefix;
         }
         use warnings;  # resume warnings
-    } else { return "more", @selection}
+    } else {    # two of more parts selected
+        print "selected two or more\n";
+        &tree_selected_two_or_more(@selection);
+        my @parts = &last_elements_only(@selection);
+        return "more", @parts;
+    }
+}
+
+sub last_elements_only {
+    my @list = @_;
+    my @output = ();
+    foreach my $element (@list) {
+        my @parts = split '\.', $element;
+        push (@output, (pop @parts));
+    }
+    return @output;
+}
+
+sub tree_selected_two_or_more {
+    my @entry = @_;
+    foreach my $this (@entry) {
+        my @list = split '\.', $this;
+        my $part = pop @list;
+        my $header = CORE::join '.', @list;
+        print "$header - $part\n";
+    }
 }
 
 sub rename_atom {
@@ -279,14 +332,19 @@ sub rename_atom {
     our ($button_R, $button_S, $button_T, $button_U);
     our $from;
     our $name;
+    our $prefix;
     $name = $from = shift;
+    $prefix = shift;
     $button_R -> configure(-state => 'disabled');
     $button_S -> configure(-state => 'disabled');
     $button_T -> configure(-state => 'disabled');
     $button_U -> configure(-state => 'disabled');
     $popup -> Label(-text => "\nEnter new name") -> pack;
     $popup -> Entry(-textvariable => \$name) -> pack;
-    $popup -> Button(-text => "Rename", -command => sub {print "atom rename $from to $name\n"} ) -> pack
+    $popup -> Button(
+        -text => "Rename",
+        -command => sub { print "can't rename atom\n" },
+    ) -> pack;
 }
 
 sub rename_sub_assy {
@@ -294,10 +352,16 @@ sub rename_sub_assy {
     our ($button_R, $button_S, $button_T, $button_U);
     our $from;
     our $name;
+    our $prefix;
     $name = $from = shift;
+    $prefix = shift;
     $button_U -> configure(-state => 'disabled');
     $popup -> Label(-text => "\nEnter new name") -> pack;
     $popup -> Entry(-textvariable => \$name) -> pack;
-    $popup -> Button(-text => "Rename", -command => sub {print "atom rename $from to $name\n"} ) -> pack
+    $popup -> Button(
+        -text => "Rename",
+        -command => sub { @assy_tree = &change_tree(\@assy_tree, "rename", "$prefix.$from", "$prefix.$name") },
+    ) -> pack;
+    return @assy_tree;
 }
 

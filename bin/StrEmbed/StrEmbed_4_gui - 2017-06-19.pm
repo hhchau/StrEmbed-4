@@ -36,7 +36,6 @@
 #                    otherwise causing editor to fail and Windows to hang
 # HHC - 2017-06-04 Version 4 Release D
 # HHC - 2017-06-15 - Have a go on new tree editor
-# HHC - 2017-06-26 - progressing
 
 require 5.12.0;  # needed for smart match
 use warnings;
@@ -1237,7 +1236,6 @@ sub tk_callback_tree{
     our ($button_R, $button_S, $button_T, $button_U);
     our $from;
     our $name;
-    our $prefix;
 
     # the meat
     if ($option eq "atom") {
@@ -1245,19 +1243,11 @@ sub tk_callback_tree{
         $button_R = $popup -> Button(-text => "Move up", -command => sub {print "move up\n"} ) -> pack;
         $button_S = $popup -> Button(-text => "Move down", -command => sub {print "move down\n"} ) -> pack;
         $button_T = $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
-        # $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_atom, $options[0], $options[1] ] ) -> pack;
+        $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_atom, $options[0] ] ) -> pack;
     } elsif ($option eq "sub_assy") {
         $popup -> Label(-text => "\nOption(s) available") -> pack;
         $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
-        $button_U = $popup -> Button(
-            -text => "Rename",
-            -command => sub {
-                @assy_tree = &rename_sub_assy($options[0], $options[1]);
-                print "X too early\n";
-                print "X @$_\n" foreach @assy_tree;
-                # $popup -> destroy;   XXXXXX problem!!!  HHC 2017-06-26 14:30
-            }
-        ) -> pack;
+        $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_sub_assy, $options[0] ] ) -> pack;
     } elsif ($option eq "top_assy") {
         $popup -> Label(-text => "\nTop level assembly selected\nNo option available") -> pack;
     }
