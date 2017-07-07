@@ -172,11 +172,8 @@ sub change_tree {
             $assy_tree_changed = 1;
         }
     } elsif ($command eq "rename") {
-        # print "in the mood of renaming (xx $from) -> (xx $to)\n";
         my @from = split /\./, $from;
         my @to   = split /\./, $to;
-        # print "--> $name_from\n";
-        # print "==> $name_to\n";
         foreach my $ref (@assy_tree) {
             my @this = @$ref;
             my @temp = ();
@@ -191,6 +188,7 @@ sub change_tree {
             push @temp_tree, \@temp;
         }
         # trying 2017-06-26
+        # print "@$_\n" foreach @temp_tree;
         &delete_tree;
         &insert_tree_items(@temp_tree);
         &replot_hasse;
@@ -294,9 +292,9 @@ sub tree_check_options {
         if ($this eq $top_assy) {
            return "top_assy", $this;
         } elsif ( $this ~~ @sub_assy ) {
-            return "sub_assy", $this, $prefix;
+            return "sub_assy", $this;  # $prefix;  # HHC 2017-07-07
         } elsif ( $this ~~ @atoms ) {
-            return "atom", $this, $prefix;
+            return "atom", $this;  # $prefix;  # HHC 2017-07-07
         }
         use warnings;  # resume warnings
     } else {    # two of more parts selected
@@ -347,6 +345,16 @@ sub rename_atom {
     ) -> pack;
 }
 
+sub get_prefix {    # is this really necessary or no $prefix is fine for &change_tree?   HHC 2017-07-097 
+    my $name = shift;
+    foreach my $ref (@assy_tree) {
+        my @list = @$ref;
+        my $end = pop @list;
+        my $prefix = CORE::join('.', @list);
+        return $prefix if $name eq $end;
+    }
+}
+
 sub rename_sub_assy {
     our $popup;
     our ($button_R, $button_S, $button_T, $button_U);
@@ -354,13 +362,22 @@ sub rename_sub_assy {
     our $name;
     our $prefix;
     $name = $from = shift;
-    $prefix = shift;
+    $prefix = &get_prefix($name);
     $button_U -> configure(-state => 'disabled');
     $popup -> Label(-text => "\nEnter new name") -> pack;
     $popup -> Entry(-textvariable => \$name) -> pack;
     $popup -> Button(
         -text => "Rename",
-        -command => sub { @assy_tree = &change_tree(\@assy_tree, "rename", "$prefix.$from", "$prefix.$name") },
+        -command => sub {
+            # print ">$prefix<\n";
+            @assy_tree = &change_tree(\@assy_tree, "rename", "$prefix.$from", "$prefix.$name");
+            # why do I need to re-do tree/hasse again here?  HHC 2017-07-07
+            &delete_tree;
+            &insert_tree_items(@assy_tree);
+            &replot_hasse;
+            $popup -> destroy;
+            
+        },
     ) -> pack;
     return @assy_tree;
 }

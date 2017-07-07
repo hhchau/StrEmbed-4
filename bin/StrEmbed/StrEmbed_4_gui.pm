@@ -1159,7 +1159,7 @@ sub click_entry {
         my @list = @{$ref};
         my $end = $list[$#list];
         $Ptree -> add(
-            CORE::join( '.', @list),    # clash hypercube &core()
+            CORE::join('.', @list),    # clash hypercube &core()
             -text => $end,
         );
     }
@@ -1225,8 +1225,10 @@ sub tk_callback_tree{
     my $heading = $popup -> Label(-text=>"Change tree structure", -font => 'bold' ) -> pack;
     $popup -> Button(-text => "Cancel", -command => [ sub {$popup -> destroy} ] ) -> pack(-side => 'bottom');
     $popup -> Label(-text => "") -> pack(-side => 'bottom');
+    # print "sel $_\n" foreach @selection;
     my @options = &tree_check_options(@selection);
     my $option = shift @options;
+    # print "opt $_\n" foreach @options;
     if (@options) {
         $popup -> Label(-text => "\nSelected part(s)") -> pack;
         $popup -> Entry(-text => $_, -state => 'readonly') -> pack foreach @options;
@@ -1239,7 +1241,7 @@ sub tk_callback_tree{
     our $name;
     our $prefix;
 
-    # the meat
+    ### the meat
     if ($option eq "atom") {
         $popup -> Label(-text => "\nOption(s) available") -> pack;
         $button_R = $popup -> Button(-text => "Move up", -command => sub {print "move up\n"} ) -> pack;
@@ -1248,13 +1250,15 @@ sub tk_callback_tree{
         # $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_atom, $options[0], $options[1] ] ) -> pack;
     } elsif ($option eq "sub_assy") {
         $popup -> Label(-text => "\nOption(s) available") -> pack;
-        $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
+        $button_R = $popup -> Button(-text => "Move up", -command => sub {print "move up\n"} ) -> pack;
+        $button_S = $popup -> Button(-text => "Move down", -command => sub {print "move down\n"} ) -> pack;
+        $button_T = $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
         $button_U = $popup -> Button(
             -text => "Rename",
             -command => sub {
                 @assy_tree = &rename_sub_assy($options[0], $options[1]);
-                print "X too early\n";
-                print "X @$_\n" foreach @assy_tree;
+                # print "xxx too early\n";
+                # print "xxx @$_\n" foreach @assy_tree;
                 # $popup -> destroy;   XXXXXX problem!!!  HHC 2017-06-26 14:30
             }
         ) -> pack;
