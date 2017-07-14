@@ -355,6 +355,33 @@ sub get_prefix {    # is this really necessary or no $prefix is fine for &change
     }
 }
 
+sub check_where_in_the_queue {
+    my $part = shift;
+    my @wanted = ();
+    my $length;
+    # print "part = $part\n";
+    foreach my $ref (@assy_tree) {
+        my @list = @$ref;
+        my $last = $list[-1];
+        if ($part eq $last) {
+            $length = -1;
+            # print "@list [$last]\n";
+            $length = $#list;
+        }
+    }
+    # print "last position = $length\n";
+    foreach my $ref (@assy_tree) {
+        my @list = @$ref;
+        # print "(@list) [$#list] <$length>\n";
+        push @wanted, $ref
+            if $#list == $length
+            and &get_prefix($part) eq &get_prefix($list[-1]);
+    }
+    print "@$_\n" foreach @wanted;
+    print "\n";
+    # as of 2017-07-10
+}
+
 sub rename_sub_assy {
     our $popup;
     our ($button_R, $button_S, $button_T, $button_U);
@@ -363,11 +390,14 @@ sub rename_sub_assy {
     our $prefix;
     $name = $from = shift;
     $prefix = &get_prefix($name);
-    $button_U -> configure(-state => 'disabled');
-    $popup -> Label(-text => "\nEnter new name") -> pack;
+    $button_R -> configure(-state => 'disabled');
+    $button_S -> configure(-state => 'disabled');
+    $button_T -> configure(-state => 'disabled');
+    $button_U -> configure(-state => 'disabled', -relief => 'sunken');
+    $popup -> Label(-text => "\nEnter a new sub-assy name") -> pack;
     $popup -> Entry(-textvariable => \$name) -> pack;
     $popup -> Button(
-        -text => "Rename",
+        -text => "Confirm\nRenaming",
         -command => sub {
             # print ">$prefix<\n";
             @assy_tree = &change_tree(\@assy_tree, "rename", "$prefix.$from", "$prefix.$name");

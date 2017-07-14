@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 #    StrEmbed-4 - Embedding assembly structure on to a corresponding hypercube lattice
-#    Copyright (C) 2017  University of Leeds
+#    Copyright (C) 2015 - 2017  University of Leeds
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -376,7 +376,7 @@ sub tk_copyright {
 ";
     my $message = "
 Embedding an assembly structure onto a corresponding hypercube lattice
-Copyright (C) 2017  University of Leeds
+Copyright (C) 2015 - 2017  University of Leeds
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1249,6 +1249,8 @@ sub tk_callback_tree{
         $button_T = $popup -> Button(-text => "Reparent", -command => sub {print "reparent\n"} ) -> pack;
         # $button_U = $popup -> Button(-text => "Rename", -command => [ \&rename_atom, $options[0], $options[1] ] ) -> pack;
     } elsif ($option eq "sub_assy") {
+        # print ">>> $options[0]\n";
+        &check_where_in_the_queue($options[0]);
         $popup -> Label(-text => "\nOption(s) available") -> pack;
         $button_R = $popup -> Button(-text => "Move up", -command => sub {print "move up\n"} ) -> pack;
         $button_S = $popup -> Button(-text => "Move down", -command => sub {print "move down\n"} ) -> pack;
@@ -1256,7 +1258,7 @@ sub tk_callback_tree{
         $button_U = $popup -> Button(
             -text => "Rename",
             -command => sub {
-                @assy_tree = &rename_sub_assy($options[0], $options[1]);
+                @assy_tree = &rename_sub_assy($options[0]);
                 # print "xxx too early\n";
                 # print "xxx @$_\n" foreach @assy_tree;
                 # $popup -> destroy;   XXXXXX problem!!!  HHC 2017-06-26 14:30
