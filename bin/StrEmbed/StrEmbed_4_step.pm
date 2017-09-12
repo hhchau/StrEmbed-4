@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 #    StrEmbed-4 - Embedding assembly structure on to a corresponding hypercube lattice
-#    Copyright (C) 2017  University of Leeds
+#    Copyright (C) 2015 - 2017  University of Leeds
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

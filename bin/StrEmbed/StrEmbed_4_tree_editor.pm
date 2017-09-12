@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-#    StrEmbed-3 - Embedding assembly structure on to a corresponding hypercube lattice
-#    Copyright (C) 2016  University of Leeds
+#    StrEmbed-4 - Embedding assembly structure on to a corresponding hypercube lattice
+#    Copyright (C) 2015 - 2017  University of Leeds
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 # HHC - 2017-06-04 Version 4 Release D
 # HHC - 2017-06-15 - Have a go on new tree editor
 # HHC - 2017-06-26 - passing -textvariable => \$name to &change_tree from &rename_sub_assy now works
+# HHC - 2017-08-11 - systematic treatment of contextual [entity] selection
 
 require 5.002;
 use warnings;
@@ -53,6 +54,7 @@ sub biggest_current_n {
 sub change_tree {
     ### i/p - \@assy_tree, $command, $from, $to
     ### o/p - @assy_tree
+    # function-based change tree
     my $ref_assy_tree = shift;
     my @assy_tree = @{$ref_assy_tree};
     my $command = shift;
@@ -266,6 +268,7 @@ sub compare_array {
 sub tree_check_options {
     # i/p = @assy_tree    # delimiter is "space"
     # i/p = @selection    # delimiter is "full stop"
+    # context-sensitive [number of parts selected] change tree
     my @selection = @_;
     # print "*** selection ***\n";
     # print "$_\n" foreach @selection;
@@ -281,9 +284,9 @@ sub tree_check_options {
     # print "sub_assy = @sub_assy\n";
     # print "atoms = @atoms\n";
     
-    if ( $#selection == -1 ) { return "None" }    # no part selected
+    if ( $#selection == -1 ) { return "None" }    # no part selected (zero)
 
-    if ( $#selection ==  0 ) {    # one part selected
+    if ( $#selection ==  0 ) {    # one part selected (one)
         my @list = split '\.', $selection[0];
         my $this = pop @list;
         my $prefix = CORE::join '.', @list if @list;
@@ -297,7 +300,8 @@ sub tree_check_options {
             return "atom", $this;  # $prefix;  # HHC 2017-07-07
         }
         use warnings;  # resume warnings
-    } else {    # two of more parts selected
+
+    } else {    # two or more parts selected (two and two plus)
         print "selected two or more\n";
         &tree_selected_two_or_more(@selection);
         my @parts = &last_elements_only(@selection);
@@ -317,11 +321,21 @@ sub last_elements_only {
 
 sub tree_selected_two_or_more {
     my @entry = @_;
+    my @pairs = ();
     foreach my $this (@entry) {
         my @list = split '\.', $this;
         my $part = pop @list;
         my $header = CORE::join '.', @list;
-        print "$header - $part\n";
+        # print "$header - $part\n";
+        push @pairs, [$header, $part];
+    }
+    my $same = 1;
+    my $first = 0;
+    foreach my $ref (@pairs) {
+        my ($header, $part) = @$ref;
+        $first = $header unless $first;
+        $same = $same && ($first eq $header);
+        print "($first)[$same] $header, $part\n";
     }
 }
 

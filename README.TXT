@@ -53,4 +53,4 @@ step_data/input/                        Sub-directory for STEP AP214 files for t
 step_data/output/                       Sub-directory for storing output STEP AP214
                                         files from StrEmbed-4
 doc/                                    Sub-directory for documentation
-doc/StrEmbed-4 Users' Manual.docx       StrEmbed-4 Users' Manual
+doc/StrEmbed-4 Users' Manual.pdf        StrEmbed-4 Users' Manual

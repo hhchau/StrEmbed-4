@@ -45,6 +45,7 @@ use strict;
 use Tk;
 use Tk::Balloon;
 use Tk::Tree;
+# use Tk::PNG;
 use StrEmbed::FileSelect;
 
 our @assy_tree;
@@ -165,8 +166,12 @@ sub tk_mainloop {
     $mw -> bind('<Control-S>' => [ sub { &file_save } ] );
     
     &tk_pulldown_menu;
+    # &tk_lower_frame;
     &tk_assembly_tree;
     &tk_canvas;
+    # my $height = $mw -> screenheight;
+    # my $width = $mw -> screenwidth;
+    # print "width = $width, height = $height\b";
     MainLoop;
 }
 
@@ -251,6 +256,56 @@ sub replot_hasse {
                       "is_covered_by_highlighted",
                       "element",
                       "is_covered_by");    
+}
+
+sub XXX_print_hash_lookup_array_coords {
+    my ($ref_1, $ref_2) = @_;
+    my %hash_id_lookup_to_array = %{$ref_1};
+    my @array_with_coords = @{$ref_2};
+    print "print_hush_lookup_array_coords\n";
+    foreach my $h (0..$#array_with_coords) {    # at height h
+        my @ee = @{$array_with_coords[$h]};
+        foreach my $j (0..$#ee) {
+            my $id = $array_with_coords[$h][$j]{id};
+            my $ref_coords = $array_with_coords[$h][$j]{coords};
+            my $ref_canvas = $array_with_coords[$h][$j]{canvas};
+            print "[$h][$j] $id, @$ref_coords, @$ref_canvas\n";
+        }
+    }
+
+    print "\n";
+    while ( my ($x, $ref_hash) = each %hash_id_lookup_to_array ) {
+        my %hash = %$ref_hash;
+        my $id = $hash{id};
+        my $label = $hash{label};
+        my $coords = $hash{coords};
+        my $canvas = $hash{canvas};
+        
+        print "[$x] $id, $label, @$coords, @$canvas\n";
+    }
+}
+
+sub XXX_print_tree {
+    print "print_tree\n";
+    my @list = $tree -> child_entries( '', 3);
+    print "$_\n" foreach @list;
+}
+
+sub XXX_print_array {
+    print "print_array\n";
+    foreach my $ref (@assy_tree) {
+        print "@{$ref}\n";
+    }
+}
+
+sub XXX_print_htree {
+    ### i/p - @assy_tree
+    print "print assy tree\n";
+    foreach my $ref (@assy_tree) {
+        my @entities = @{$ref};
+        my $list = CORE::join ' -- ', @entities;
+        print "$list\n";
+    }
 }
 
 sub htree_to_pairs {
@@ -546,6 +601,13 @@ sub tk_lower_frame {
 
 ### big bundle
 
+sub XXX_print_pairs {
+    foreach my $ref_parent_child (@_) {
+        my ($parent, $child) = @{$ref_parent_child};
+        print "$parent, $child\n";
+    }
+}
+
 sub assembly_has_parent_to_Htree {
     ### i/p - %assembly, %has_parent
     ### o/p - assembly tree without dots
@@ -596,6 +658,12 @@ sub file_open {
         $max = &big_bundle(@parent_child_pair);
         &tk_plotting_overall;
     }
+}
+
+sub XXX_print_assy_tree {
+    my @assy_tree = @_;
+    print "assy_tree\n";
+    print "@$_\n" foreach @assy_tree;
 }
 
 sub big_bundle {
@@ -1192,12 +1260,23 @@ sub tk_callback_tree{
             -text => "Rename",
             -command => sub {
                 @assy_tree = &rename_sub_assy($options[0]);
+                # print "xxx too early\n";
+                # print "xxx @$_\n" foreach @assy_tree;
+                # $popup -> destroy;   XXXXXX problem!!!  HHC 2017-06-26 14:30
             }
         ) -> pack;
     } elsif ($option eq "top_assy") {
         $popup -> Label(-text => "\nTop level assembly selected\nNo option available") -> pack;
     }
+    
+    
 }
+
+
+
+
+
+
 
 sub an_element_of ($$) {
     my $this = shift;
@@ -1299,14 +1378,125 @@ sub tk_assembly_tree {
         -expand => 1,
     );
 
-    ### switch off new editor for Release E - HHC 2017-09012
-    ### $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
+    # $tree -> bind('<ButtonPress-1>'           => [\&tk_callback_B1, "Button",         "Press"]);
+    # $tree -> bind('<ButtonRelease-1>'         => [\&tk_callback_B1, "Button",         "Release"]);
+    # $tree -> bind('<Control-ButtonPress-1>'   => [\&tk_callback_B1, "Control-Button", "Press"]);
+    # $tree -> bind('<Control-ButtonRelease-1>' => [\&tk_callback_B1, "Control-Button", "Release"]);
+    # $tree -> bind('<Shift-ButtonPress-1>'     => [\&tk_callback_B1, "Shift-Button",   "Press"]);
+    # $tree -> bind('<Shift-ButtonRelease-1>'   => [\&tk_callback_B1, "Shift-Button",   "Release"]);
+    # $tree -> bind('<Button-2>' => [\&tk_callback_B2, 'qwerty' ]);
+    $tree -> bind('<Button-3>' => [\&tk_callback_tree, "xyz"]);
+    # $tree -> bind('<MouseWheel>' => [\&print_mousewheel]);
+=ccc
+    $f_tree -> Entry(
+        -text => "Entry under cursor",
+        -state => 'disable',
+        -relief => 'flat',
+    ) -> pack;
+    $f_tree -> Entry(
+        -textvariable => \$entry_under_cursor,
+    ) -> pack;
+    $f_tree -> Entry(
+        -text => "First entry selected",
+        -state => 'disable',
+        -relief => 'flat',
+    ) -> pack;
+    $f_tree -> Entry(
+        -textvariable => \$entry_first_selected,
+    ) -> pack;
+    $f_tree -> Entry(
+        -text => "Second entry selected",
+        -state => 'disable',
+        -relief => 'flat',
+    ) -> pack;
+    $f_tree -> Entry(
+        -textvariable => \$entry_second_selected,
+    ) -> pack;
+
+    ###
+
+    my $box = $f_tree -> Frame(
+        # -scrollbars => 'se',
+        -width => 40,
+    ) -> pack(
+        -side => 'bottom',
+        # -fill => 'both',
+        # -expand => 1,
+    );
+    $box -> focusFollowsMouse;
+    # $box -> packForget;
+
+    my $icon_scroll_up_up     = $box->Photo(-file => "./resources/icons/32x32/Actions-arrow-up-double-icon-small.png");
+    my $icon_scroll_up        = $box->Photo(-file => "./resources/icons/32x32/Actions-arrow-up-icon-small.png");
+    my $icon_scroll_down      = $box->Photo(-file => "./resources/icons/32x32/Actions-arrow-down-icon-small.png");
+    my $icon_scroll_down_down = $box->Photo(-file => "./resources/icons/32x32/Actions-arrow-down-double-icon-small.png");
+    my $icon_level_up         = $box->Photo(-file => "./resources/icons/visualpharm/must_have_icon_set/Undo/Undo_32x32.png");
+    my $icon_level_down       = $box->Photo(-file => "./resources/icons/visualpharm/must_have_icon_set/Redo/Redo_32x32.png");
+
+    my $button1 = $box -> Button(
+        -command => [\&tk_button_callback, "up up"],
+        -image => $icon_scroll_up_up,
+    ) -> pack (
+        -side => 'top',
+    );
+
+    my $button1a = $box -> Button(
+        -command => [\&tk_button_callback, "up"],
+        -image => $icon_scroll_up,
+    ) -> pack (
+        -side => 'top',
+    );
+
+    my $button4 = $box -> Button(
+        -command => [\&tk_button_callback, "down down"],
+        -image => $icon_scroll_down_down,
+        # -text => "To the bottom",
+    ) -> pack (
+        -side => 'bottom',
+    );
+
+    my $button1b = $box -> Button(
+        -command => [\&tk_button_callback, "down"],
+        -image => $icon_scroll_down,
+    ) -> pack (
+        -side => 'bottom',
+    );
+
+    my $button2 = $box -> Button(
+        -command => [\&tk_button_callback, "level up"],
+        -image => $icon_level_up,
+    ) -> pack (
+        -side => 'left',
+        -expand => 1,
+        # -fill => 'x',
+    );
+
+    my $button3 = $box -> Button(
+        -command => [\&tk_button_callback, "level down"],
+        -image => $icon_level_down,
+    ) -> pack (
+        -side => 'right',
+        -expand => 1,
+        # -fill => 'x',
+    );
+
+    my $balloons = $box -> Balloon(
+        -background => 'gray95',
+    );
+    my $b1  = $balloons -> attach($button1,  -balloonmsg => "Scroll to Top", -statusmsg => "Status bar message");
+    my $b1a = $balloons -> attach($button1a, -balloonmsg => "Scroll Up", -statusmsg => "Status bar message");
+    my $b1b = $balloons -> attach($button1b, -balloonmsg => "Scroll Down", -statusmsg => "Status bar message");
+    my $b4  = $balloons -> attach($button4,  -balloonmsg => "Scroll to Bottom", -statusmsg => "Status bar message");
+    my $b2  = $balloons -> attach($button2,  -balloonmsg => "Move Level Up", -statusmsg => "Status bar message");
+    my $b3  = $balloons -> attach($button3,  -balloonmsg => "Move Level Down", -statusmsg => "Status bar message");
+=cut
 }
 
 ### button callbacks
 
 sub tk_button_parts {
     my $entry = shift;
+    # print "do sthg $chosen_part\n";
     $info -> insert( 'end', qq(Part or sub-assembly "$chosen_part" is chosen\n),);
     push @list_of_assembly_parts, $chosen_part;
     # print "list of assembly parts @list_of_assembly_parts\n";
